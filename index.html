@@ -103,7 +103,7 @@
         <div id="tab-pause" class="tab-content">
             <div class="form-group">
                 <label>Active Task</label>
-                <select id="cmbActiveTaskPause">
+                <select id="cmbActiveTaskPause" onchange="taskSelectedPause()">
                     <option value="">-- Select Task --</option>
                 </select>
             </div>
@@ -133,7 +133,7 @@
         <div id="tab-resume" class="tab-content">
             <div class="form-group">
                 <label>Paused Task</label>
-                <select id="cmbPausedTaskResume">
+                <select id="cmbPausedTaskResume" onchange="taskSelectedResume()">
                     <option value="">-- Select Task --</option>
                 </select>
             </div>
@@ -163,7 +163,7 @@
         <div id="tab-close" class="tab-content">
             <div class="form-group">
                 <label>Active Task</label>
-                <select id="cmbActiveTaskClose">
+                <select id="cmbActiveTaskClose" onchange="taskSelectedClose()">
                     <option value="">-- Select Task --</option>
                 </select>
             </div>

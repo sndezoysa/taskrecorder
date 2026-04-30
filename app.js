@@ -45,7 +45,6 @@ function extractDateTime(tab) {
         return;
     }
 
-    // Use sent time for Pause and Close, received time for Resume
     let dateTime;
     if (tab === 'resume') {
         dateTime = new Date(item.dateTimeCreated);
@@ -64,8 +63,24 @@ function extractDateTime(tab) {
     }
 }
 
-// ── Create Task (placeholder - Firebase comes in Phase 3) ─────────────
-function createTask() {
+// ── Generate Sequential Task ID ───────────────────────────────────────
+async function generateTaskId() {
+    const snapshot = await db.collection('tasks')
+        .orderBy('taskId', 'desc')
+        .limit(1)
+        .get();
+
+    if (snapshot.empty) {
+        return '0001';
+    }
+
+    const lastTask = snapshot.docs[0].data();
+    const lastNumber = parseInt(lastTask.taskId, 10);
+    return String(lastNumber + 1).padStart(4, '0');
+}
+
+// ── Create Task ───────────────────────────────────────────────────────
+async function createTask() {
     const subject = document.getElementById('txtSubject').value;
     const sender = document.getElementById('txtSender').value;
 
@@ -74,33 +89,290 @@ function createTask() {
         return;
     }
 
-    // Placeholder - will connect to Firebase in Phase 3
-    showStatus('create', 'Firebase not connected yet. Coming in Phase 3!', 'error');
+    // Disable button to prevent double click
+    document.getElementById('btnCreate').disabled = true;
+    showStatus('create', 'Creating task...', 'success');
+
+    try {
+        const taskId = await generateTaskId();
+        const actionDateTime = document.getElementById('txtDateTime').value;
+        const comments = document.getElementById('txtComments').value;
+        const taskType = document.querySelector('input[name="taskType"]:checked').value;
+
+        const newTask = {
+            taskId:          taskId,
+            subject:         subject,
+            senderName:      sender,
+            receiverName:    document.getElementById('txtReceiver').value,
+            projectId:       document.getElementById('txtProjectID').value,
+            createdDateTime: actionDateTime,
+            status:          'Active',
+            activateTime:    actionDateTime,
+            inactivateTime:  '',
+            workTimeMin:     0,
+            comments:        '[' + actionDateTime + '] Created - ' + comments,
+            site:            document.getElementById('cmbSite').value,
+            taskType:        taskType,
+            priorityScore:   parseInt(document.getElementById('txtPriority').value, 10)
+        };
+
+        // Save to Firestore using taskId as document ID
+        await db.collection('tasks').doc(taskId).set(newTask);
+
+        showStatus('create', 'Task ' + taskId + ' created successfully! ✅', 'success');
+        clearCreate();
+
+    } catch (error) {
+        console.error('Error creating task:', error);
+        showStatus('create', 'Error: ' + error.message, 'error');
+        document.getElementById('btnCreate').disabled = false;
+    }
 }
 
-// ── Pause Task (placeholder) ──────────────────────────────────────────
-function pauseTask() {
-    showStatus('pause', 'Firebase not connected yet. Coming in Phase 3!', 'error');
+// ── Load Active Tasks ─────────────────────────────────────────────────
+async function loadActiveTasks(tab) {
+    const selectId = tab === 'pause' ? 'cmbActiveTaskPause' : 'cmbActiveTaskClose';
+    const select = document.getElementById(selectId);
+
+    select.innerHTML = '<option value="">-- Loading... --</option>';
+
+    try {
+        const snapshot = await db.collection('tasks')
+            .where('status', '==', 'Active')
+            .orderBy('taskId', 'asc')
+            .get();
+
+        select.innerHTML = '<option value="">-- Select Task --</option>';
+
+        if (snapshot.empty) {
+            showStatus(tab, 'No active tasks found.', 'error');
+            return;
+        }
+
+        snapshot.forEach(doc => {
+            const task = doc.data();
+            const option = document.createElement('option');
+            option.value = task.taskId;
+            option.textContent = task.taskId + ' - ' + task.subject.substring(0, 50);
+            select.appendChild(option);
+        });
+
+        showStatus(tab, snapshot.size + ' active task(s) loaded.', 'success');
+
+    } catch (error) {
+        console.error('Error loading tasks:', error);
+        showStatus(tab, 'Error: ' + error.message, 'error');
+    }
 }
 
-// ── Resume Task (placeholder) ─────────────────────────────────────────
-function resumeTask() {
-    showStatus('resume', 'Firebase not connected yet. Coming in Phase 3!', 'error');
+// ── Load Paused Tasks ─────────────────────────────────────────────────
+async function loadPausedTasks() {
+    const select = document.getElementById('cmbPausedTaskResume');
+
+    select.innerHTML = '<option value="">-- Loading... --</option>';
+
+    try {
+        const snapshot = await db.collection('tasks')
+            .where('status', '==', 'Paused')
+            .orderBy('taskId', 'asc')
+            .get();
+
+        select.innerHTML = '<option value="">-- Select Task --</option>';
+
+        if (snapshot.empty) {
+            showStatus('resume', 'No paused tasks found.', 'error');
+            return;
+        }
+
+        snapshot.forEach(doc => {
+            const task = doc.data();
+            const option = document.createElement('option');
+            option.value = task.taskId;
+            option.textContent = task.taskId + ' - ' + task.subject.substring(0, 50);
+            select.appendChild(option);
+        });
+
+        showStatus('resume', snapshot.size + ' paused task(s) loaded.', 'success');
+
+    } catch (error) {
+        console.error('Error loading tasks:', error);
+        showStatus('resume', 'Error: ' + error.message, 'error');
+    }
 }
 
-// ── Close Task (placeholder) ──────────────────────────────────────────
-function closeTask() {
-    showStatus('close', 'Firebase not connected yet. Coming in Phase 3!', 'error');
+// ── Task Selected in Pause Dropdown ──────────────────────────────────
+async function taskSelectedPause() {
+    const taskId = document.getElementById('cmbActiveTaskPause').value;
+    if (!taskId) {
+        document.getElementById('txtActiveSincePause').value = '';
+        return;
+    }
+    try {
+        const doc = await db.collection('tasks').doc(taskId).get();
+        if (doc.exists) {
+            document.getElementById('txtActiveSincePause').value = doc.data().activateTime;
+        }
+    } catch (error) {
+        console.error('Error fetching task:', error);
+    }
 }
 
-// ── Load Active Tasks (placeholder) ──────────────────────────────────
-function loadActiveTasks(tab) {
-    showStatus(tab, 'Firebase not connected yet. Coming in Phase 3!', 'error');
+// ── Task Selected in Resume Dropdown ─────────────────────────────────
+async function taskSelectedResume() {
+    const taskId = document.getElementById('cmbPausedTaskResume').value;
+    if (!taskId) {
+        document.getElementById('txtPausedSinceResume').value = '';
+        return;
+    }
+    try {
+        const doc = await db.collection('tasks').doc(taskId).get();
+        if (doc.exists) {
+            document.getElementById('txtPausedSinceResume').value = doc.data().inactivateTime;
+        }
+    } catch (error) {
+        console.error('Error fetching task:', error);
+    }
 }
 
-// ── Load Paused Tasks (placeholder) ──────────────────────────────────
-function loadPausedTasks() {
-    showStatus('resume', 'Firebase not connected yet. Coming in Phase 3!', 'error');
+// ── Task Selected in Close Dropdown ──────────────────────────────────
+async function taskSelectedClose() {
+    const taskId = document.getElementById('cmbActiveTaskClose').value;
+    if (!taskId) {
+        document.getElementById('txtActiveSinceClose').value = '';
+        return;
+    }
+    try {
+        const doc = await db.collection('tasks').doc(taskId).get();
+        if (doc.exists) {
+            document.getElementById('txtActiveSinceClose').value = doc.data().activateTime;
+        }
+    } catch (error) {
+        console.error('Error fetching task:', error);
+    }
+}
+
+// ── Pause Task ────────────────────────────────────────────────────────
+async function pauseTask() {
+    const taskId = document.getElementById('cmbActiveTaskPause').value;
+    const pauseTime = document.getElementById('txtDateTimePause').value;
+    const comments = document.getElementById('txtCommentsPause').value;
+
+    if (!taskId || !pauseTime) {
+        showStatus('pause', 'Please select a task and set pause time.', 'error');
+        return;
+    }
+
+    try {
+        const docRef = db.collection('tasks').doc(taskId);
+        const doc = await docRef.get();
+        const task = doc.data();
+
+        // Calculate time difference in minutes
+        const activateTime = new Date(task.activateTime.replace(' ', 'T'));
+        const pauseDateTime = new Date(pauseTime.replace(' ', 'T'));
+        const diffMinutes = Math.round((pauseDateTime - activateTime) / 60000);
+        const newWorkTime = (task.workTimeMin || 0) + diffMinutes;
+
+        // Append comment
+        const newComment = task.comments +
+            '\n[' + pauseTime + '] Paused - ' + comments;
+
+        await docRef.update({
+            status:        'Paused',
+            inactivateTime: pauseTime,
+            workTimeMin:   newWorkTime,
+            comments:      newComment
+        });
+
+        showStatus('pause', 'Task ' + taskId + ' paused. Work time: ' + newWorkTime + ' mins ✅', 'success');
+        document.getElementById('cmbActiveTaskPause').innerHTML = '<option value="">-- Select Task --</option>';
+        clearPause();
+
+    } catch (error) {
+        console.error('Error pausing task:', error);
+        showStatus('pause', 'Error: ' + error.message, 'error');
+    }
+}
+
+// ── Resume Task ───────────────────────────────────────────────────────
+async function resumeTask() {
+    const taskId = document.getElementById('cmbPausedTaskResume').value;
+    const resumeTime = document.getElementById('txtDateTimeResume').value;
+    const comments = document.getElementById('txtCommentsResume').value;
+
+    if (!taskId || !resumeTime) {
+        showStatus('resume', 'Please select a task and set resume time.', 'error');
+        return;
+    }
+
+    try {
+        const docRef = db.collection('tasks').doc(taskId);
+        const doc = await docRef.get();
+        const task = doc.data();
+
+        // Append comment
+        const newComment = task.comments +
+            '\n[' + resumeTime + '] Resumed - ' + comments;
+
+        await docRef.update({
+            status:        'Active',
+            activateTime:  resumeTime,
+            inactivateTime: '',
+            comments:      newComment
+        });
+
+        showStatus('resume', 'Task ' + taskId + ' resumed. Clock restarted ✅', 'success');
+        document.getElementById('cmbPausedTaskResume').innerHTML = '<option value="">-- Select Task --</option>';
+        clearResume();
+
+    } catch (error) {
+        console.error('Error resuming task:', error);
+        showStatus('resume', 'Error: ' + error.message, 'error');
+    }
+}
+
+// ── Close Task ────────────────────────────────────────────────────────
+async function closeTask() {
+    const taskId = document.getElementById('cmbActiveTaskClose').value;
+    const closeTime = document.getElementById('txtDateTimeClose').value;
+    const comments = document.getElementById('txtCommentsClose').value;
+
+    if (!taskId || !closeTime) {
+        showStatus('close', 'Please select a task and set close time.', 'error');
+        return;
+    }
+
+    try {
+        const docRef = db.collection('tasks').doc(taskId);
+        const doc = await docRef.get();
+        const task = doc.data();
+
+        // Calculate time difference in minutes
+        const activateTime = new Date(task.activateTime.replace(' ', 'T'));
+        const closeDateTime = new Date(closeTime.replace(' ', 'T'));
+        const diffMinutes = Math.round((closeDateTime - activateTime) / 60000);
+        const finalWorkTime = (task.workTimeMin || 0) + diffMinutes;
+        const finalWorkHours = (finalWorkTime / 60).toFixed(1);
+
+        // Append comment
+        const newComment = task.comments +
+            '\n[' + closeTime + '] Closed - ' + comments;
+
+        await docRef.update({
+            status:         'Closed',
+            inactivateTime: closeTime,
+            workTimeMin:    finalWorkTime,
+            comments:       newComment
+        });
+
+        showStatus('close', 'Task ' + taskId + ' closed. Total: ' + finalWorkTime + ' mins (' + finalWorkHours + ' hrs) ✅', 'success');
+        document.getElementById('cmbActiveTaskClose').innerHTML = '<option value="">-- Select Task --</option>';
+        clearClose();
+
+    } catch (error) {
+        console.error('Error closing task:', error);
+        showStatus('close', 'Error: ' + error.message, 'error');
+    }
 }
 
 // ── Set Current Time ──────────────────────────────────────────────────
