@@ -6,7 +6,7 @@
     xsi:type="MailApp">
 
     <Id>6f405630-33f4-4772-8054-e5b459d03465</Id>
-    <Version>1.0.2.0</Version>
+    <Version>1.0.3.0</Version>
     <ProviderName>TaskRecorder</ProviderName>
     <DefaultLocale>en-US</DefaultLocale>
     <DisplayName DefaultValue="Task Recorder"/>
@@ -50,7 +50,7 @@
         xmlns="http://schemas.microsoft.com/office/mailappversionoverrides"
         xsi:type="VersionOverridesV1_0">
 
-        <!-- VersionOverrides V1_1 nested inside — used by New Outlook & Outlook Web -->
+        <!-- VersionOverrides V1_1 nested inside -->
         <VersionOverrides
             xmlns="http://schemas.microsoft.com/office/mailappversionoverrides/1.1"
             xsi:type="VersionOverridesV1_1">
@@ -82,7 +82,6 @@
                                             <bt:Image size="80" resid="Icon.80x80"/>
                                         </Icon>
                                         <Action xsi:type="ShowTaskpane">
-                                            <TaskpaneId>ButtonId1</TaskpaneId>
                                             <SourceLocation resid="Taskpane.Url"/>
                                         </Action>
                                     </Control>
