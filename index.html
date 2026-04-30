@@ -45,13 +45,37 @@
                 <label>Site/Company</label>
                 <select id="cmbSite">
                     <option value="MEDK">MEDK</option>
-                    <option value="MEAS">MEAS</option>
-                    <option value="MENO">MENO</option>
+                    <option value="MELK">MELK</option>
+                    <option value="METC">METC</option>
+                    <option value="MEIN">MEIN</option>
+                    <option value="MEFR">MEFR</option>
+                    <option value="MEPT">MEPT</option>
+                    <option value="MEMY">MEMY</option>
+                    <option value="MEUS">MEUS</option>
+                    <option value="FAS">FAS</option>
+                    <option value="MEMAF">MEMAF</option>
+                    <option value="MAKEEN Other">MAKEEN Other</option>
+                    <option value="External">External</option>
                 </select>
             </div>
             <div class="form-group">
                 <label>Project ID</label>
                 <input type="text" id="txtProjectID" placeholder="Optional"/>
+            </div>
+            <div class="form-group">
+                <label>Priority Score</label>
+                <select id="txtPriority">
+                    <option value="1">1 — Lowest</option>
+                    <option value="2">2</option>
+                    <option value="3">3</option>
+                    <option value="4">4</option>
+                    <option value="5" selected>5 — Medium</option>
+                    <option value="6">6</option>
+                    <option value="7">7</option>
+                    <option value="8">8</option>
+                    <option value="9">9</option>
+                    <option value="10">10 — Highest</option>
+                </select>
             </div>
             <div class="form-group">
                 <label>Task Type</label>
@@ -95,6 +119,7 @@
             <div class="button-row">
                 <button class="btn-secondary" onclick="loadActiveTasks('pause')">Load Tasks</button>
                 <button class="btn-secondary" onclick="setCurrentTime('pause')">Now</button>
+                <button class="btn-secondary" onclick="extractDateTime('pause')">Extract</button>
                 <button class="btn-secondary" onclick="clearPause()">Clear</button>
                 <button class="btn-primary" onclick="pauseTask()">Pause</button>
             </div>
@@ -124,6 +149,7 @@
             <div class="button-row">
                 <button class="btn-secondary" onclick="loadPausedTasks()">Load Tasks</button>
                 <button class="btn-secondary" onclick="setCurrentTime('resume')">Now</button>
+                <button class="btn-secondary" onclick="extractDateTime('resume')">Extract</button>
                 <button class="btn-secondary" onclick="clearResume()">Clear</button>
                 <button class="btn-primary" onclick="resumeTask()">Resume</button>
             </div>
@@ -153,6 +179,7 @@
             <div class="button-row">
                 <button class="btn-secondary" onclick="loadActiveTasks('close')">Load Tasks</button>
                 <button class="btn-secondary" onclick="setCurrentTime('close')">Now</button>
+                <button class="btn-secondary" onclick="extractDateTime('close')">Extract</button>
                 <button class="btn-secondary" onclick="clearClose()">Clear</button>
                 <button class="btn-primary" onclick="closeTask()">Close</button>
             </div>

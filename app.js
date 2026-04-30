@@ -7,24 +7,17 @@ Office.onReady(function (info) {
 
 // ── Tab Switching ─────────────────────────────────────────────────────
 function showTab(tabName) {
-    // Hide all tab contents
     document.querySelectorAll('.tab-content').forEach(tab => {
         tab.classList.remove('active');
     });
-
-    // Remove active from all tab buttons
     document.querySelectorAll('.tab').forEach(btn => {
         btn.classList.remove('active');
     });
-
-    // Show selected tab content
     document.getElementById('tab-' + tabName).classList.add('active');
-
-    // Mark selected tab button as active
     event.target.classList.add('active');
 }
 
-// ── Extract Email Data ────────────────────────────────────────────────
+// ── Extract Full Email Data (Create tab) ──────────────────────────────
 function extractEmail() {
     const item = Office.context.mailbox.item;
 
@@ -41,6 +34,34 @@ function extractEmail() {
     document.getElementById('txtDateTime').value = formatDateTime(received);
 
     document.getElementById('btnCreate').disabled = false;
+}
+
+// ── Extract Date & Time Only (Pause/Resume/Close tabs) ────────────────
+function extractDateTime(tab) {
+    const item = Office.context.mailbox.item;
+
+    if (!item) {
+        showStatus(tab, 'No email selected.', 'error');
+        return;
+    }
+
+    // Use sent time for Pause and Close, received time for Resume
+    let dateTime;
+    if (tab === 'resume') {
+        dateTime = new Date(item.dateTimeCreated);
+    } else {
+        dateTime = new Date(item.dateSent || item.dateTimeCreated);
+    }
+
+    const formatted = formatDateTime(dateTime);
+
+    if (tab === 'pause') {
+        document.getElementById('txtDateTimePause').value = formatted;
+    } else if (tab === 'resume') {
+        document.getElementById('txtDateTimeResume').value = formatted;
+    } else if (tab === 'close') {
+        document.getElementById('txtDateTimeClose').value = formatted;
+    }
 }
 
 // ── Create Task (placeholder - Firebase comes in Phase 3) ─────────────
@@ -85,7 +106,6 @@ function loadPausedTasks() {
 // ── Set Current Time ──────────────────────────────────────────────────
 function setCurrentTime(tab) {
     const now = formatDateTime(new Date());
-
     if (tab === 'pause') {
         document.getElementById('txtDateTimePause').value = now;
     } else if (tab === 'resume') {
@@ -104,6 +124,7 @@ function clearCreate() {
     document.getElementById('txtProjectID').value = '';
     document.getElementById('txtComments').value = '';
     document.getElementById('cmbSite').value = 'MEDK';
+    document.getElementById('txtPriority').value = '5';
     document.querySelector('input[name="taskType"][value="Requested"]').checked = true;
     document.getElementById('btnCreate').disabled = true;
 }
@@ -133,12 +154,9 @@ function formatDateTime(date) {
 function showStatus(tab, message, type) {
     const statusId = 'status-' + tab;
     let statusEl = document.getElementById(statusId);
-
     if (statusEl) {
         statusEl.textContent = message;
         statusEl.className = 'status-msg ' + type;
-
-        // Auto hide after 4 seconds
         setTimeout(() => {
             statusEl.className = 'status-msg';
         }, 4000);
