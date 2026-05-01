@@ -26,24 +26,6 @@ function showTab(tabName) {
     }
 }
 
-// ── Custom Confirm Dialog ─────────────────────────────────────────────
-function showConfirm(message) {
-    return new Promise((resolve) => {
-        document.getElementById('confirmMessage').textContent = message;
-        document.getElementById('confirmOverlay').style.display = 'block';
-
-        document.getElementById('confirmYes').onclick = () => {
-            document.getElementById('confirmOverlay').style.display = 'none';
-            resolve(true);
-        };
-
-        document.getElementById('confirmNo').onclick = () => {
-            document.getElementById('confirmOverlay').style.display = 'none';
-            resolve(false);
-        };
-    });
-}
-
 // ── Extract Full Email Data (Create tab) ──────────────────────────────
 function extractEmail() {
     const item = Office.context.mailbox.item;
@@ -182,7 +164,7 @@ async function loadActiveTasks(tab) {
             select.appendChild(option);
         });
 
-        showStatus(tab, snapshot.size + ' active task(s) loaded.', 'success');
+        showStatus(tab, snapshot.size + ' active task(s) loaded. ✅', 'success');
 
     } catch (error) {
         console.error('Error loading tasks:', error);
@@ -217,7 +199,7 @@ async function loadPausedTasks() {
             select.appendChild(option);
         });
 
-        showStatus('resume', snapshot.size + ' paused task(s) loaded.', 'success');
+        showStatus('resume', snapshot.size + ' paused task(s) loaded. ✅', 'success');
 
     } catch (error) {
         console.error('Error loading tasks:', error);
@@ -354,6 +336,9 @@ async function resumeTask() {
 }
 
 // ── Close Task ────────────────────────────────────────────────────────
+let closeConfirmPending = false;
+let closeConfirmTimer = null;
+
 async function closeTask() {
     const taskId = document.getElementById('cmbActiveTaskClose').value;
     const closeTime = document.getElementById('txtDateTimeClose').value;
@@ -364,9 +349,26 @@ async function closeTask() {
         return;
     }
 
-    // Custom confirm dialog
-    const confirmed = await showConfirm('Are you sure you want to close task ' + taskId + '? This cannot be undone.');
-    if (!confirmed) return;
+    // First click — ask for confirmation
+    if (!closeConfirmPending) {
+        closeConfirmPending = true;
+
+        const btn = document.getElementById('btnClose');
+        btn.style.backgroundColor = '#c0392b';
+        btn.textContent = 'Close Task';
+
+        showStatus('close', '⚠️ Click Close again to confirm. Auto cancels in 10 seconds.', 'error');
+
+        closeConfirmTimer = setTimeout(() => {
+            resetCloseButton();
+        }, 10000);
+
+        return;
+    }
+
+    // Second click — proceed with closing
+    clearTimeout(closeConfirmTimer);
+    resetCloseButton();
 
     try {
         const docRef = db.collection('tasks').doc(taskId);
@@ -397,6 +399,14 @@ async function closeTask() {
         console.error('Error closing task:', error);
         showStatus('close', 'Error: ' + error.message, 'error');
     }
+}
+
+function resetCloseButton() {
+    closeConfirmPending = false;
+    const btn = document.getElementById('btnClose');
+    btn.style.backgroundColor = '';
+    btn.textContent = 'Close';
+    showStatus('close', '', '');
 }
 
 // ── Set Current Time ──────────────────────────────────────────────────
