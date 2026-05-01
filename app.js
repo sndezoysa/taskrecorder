@@ -26,6 +26,24 @@ function showTab(tabName) {
     }
 }
 
+// ── Custom Confirm Dialog ─────────────────────────────────────────────
+function showConfirm(message) {
+    return new Promise((resolve) => {
+        document.getElementById('confirmMessage').textContent = message;
+        document.getElementById('confirmOverlay').style.display = 'block';
+
+        document.getElementById('confirmYes').onclick = () => {
+            document.getElementById('confirmOverlay').style.display = 'none';
+            resolve(true);
+        };
+
+        document.getElementById('confirmNo').onclick = () => {
+            document.getElementById('confirmOverlay').style.display = 'none';
+            resolve(false);
+        };
+    });
+}
+
 // ── Extract Full Email Data (Create tab) ──────────────────────────────
 function extractEmail() {
     const item = Office.context.mailbox.item;
@@ -98,7 +116,6 @@ async function createTask() {
         return;
     }
 
-    // Disable button to prevent double click
     document.getElementById('btnCreate').disabled = true;
     showStatus('create', 'Creating task...', 'success');
 
@@ -125,7 +142,6 @@ async function createTask() {
             priorityScore:   parseInt(document.getElementById('txtPriority').value, 10)
         };
 
-        // Save to Firestore using taskId as document ID
         await db.collection('tasks').doc(taskId).set(newTask);
 
         showStatus('create', 'Task ' + taskId + ' created successfully! ✅', 'success');
@@ -276,21 +292,19 @@ async function pauseTask() {
         const doc = await docRef.get();
         const task = doc.data();
 
-        // Calculate time difference in minutes
         const activateTime = new Date(task.activateTime.replace(' ', 'T'));
         const pauseDateTime = new Date(pauseTime.replace(' ', 'T'));
         const diffMinutes = Math.round((pauseDateTime - activateTime) / 60000);
         const newWorkTime = (task.workTimeMin || 0) + diffMinutes;
 
-        // Append comment
         const newComment = task.comments +
             '\n[' + pauseTime + '] Paused - ' + comments;
 
         await docRef.update({
-            status:        'Paused',
+            status:         'Paused',
             inactivateTime: pauseTime,
-            workTimeMin:   newWorkTime,
-            comments:      newComment
+            workTimeMin:    newWorkTime,
+            comments:       newComment
         });
 
         showStatus('pause', 'Task ' + taskId + ' paused. Work time: ' + newWorkTime + ' mins ✅', 'success');
@@ -319,15 +333,14 @@ async function resumeTask() {
         const doc = await docRef.get();
         const task = doc.data();
 
-        // Append comment
         const newComment = task.comments +
             '\n[' + resumeTime + '] Resumed - ' + comments;
 
         await docRef.update({
-            status:        'Active',
-            activateTime:  resumeTime,
+            status:         'Active',
+            activateTime:   resumeTime,
             inactivateTime: '',
-            comments:      newComment
+            comments:       newComment
         });
 
         showStatus('resume', 'Task ' + taskId + ' resumed. Clock restarted ✅', 'success');
@@ -351,8 +364,8 @@ async function closeTask() {
         return;
     }
 
-    // Confirm before closing
-    const confirmed = confirm('Are you sure you want to close task ' + taskId + '? This cannot be undone.');
+    // Custom confirm dialog
+    const confirmed = await showConfirm('Are you sure you want to close task ' + taskId + '? This cannot be undone.');
     if (!confirmed) return;
 
     try {
@@ -360,14 +373,12 @@ async function closeTask() {
         const doc = await docRef.get();
         const task = doc.data();
 
-        // Calculate time difference in minutes
         const activateTime = new Date(task.activateTime.replace(' ', 'T'));
         const closeDateTime = new Date(closeTime.replace(' ', 'T'));
         const diffMinutes = Math.round((closeDateTime - activateTime) / 60000);
         const finalWorkTime = (task.workTimeMin || 0) + diffMinutes;
         const finalWorkHours = (finalWorkTime / 60).toFixed(1);
 
-        // Append comment
         const newComment = task.comments +
             '\n[' + closeTime + '] Closed - ' + comments;
 
