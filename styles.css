@@ -30,6 +30,9 @@ body {
     color: var(--text-light);
     padding: 0.6rem 1rem;
     margin-bottom: 0.5rem;
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
 }
 
 .header h1 {
