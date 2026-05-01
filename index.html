@@ -7,37 +7,21 @@
     <script src="https://appsforoffice.microsoft.com/lib/1/hosted/office.js"></script>
     <script src="https://www.gstatic.com/firebasejs/10.12.0/firebase-app-compat.js"></script>
     <script src="https://www.gstatic.com/firebasejs/10.12.0/firebase-firestore-compat.js"></script>
-    <script src="https://www.gstatic.com/firebasejs/10.12.0/firebase-auth-compat.js"></script>
     <script src="firebase-config.js"></script>
     <link rel="stylesheet" href="styles.css">
 </head>
 <body>
 
-    <!-- Auth Screen -->
-    <div id="authScreen" style="display:none; padding:2rem; text-align:center;">
-        <div style="width:50px; height:50px; background:linear-gradient(135deg,#1a4d1a,#2d6b2d); border-radius:50%; margin:0 auto 1rem; display:flex; align-items:center; justify-content:center; color:white; font-size:1.5rem;">✓</div>
-        <h2 style="color:#1a4d1a; font-size:1rem; margin-bottom:0.3rem;">Task Recorder</h2>
-        <p style="color:#666; font-size:0.8rem; margin-bottom:1.5rem;">Sign in to access your tasks</p>
-        <button onclick="signIn()" style="background:#2d6b2d; color:white; border:none; padding:0.6rem 1rem; border-radius:5px; font-size:0.85rem; cursor:pointer; width:100%; font-family:inherit;">
-            🔵 Sign in with Google
-        </button>
-        <div id="authError" style="color:#c0392b; font-size:0.78rem; margin-top:0.6rem;"></div>
-    </div>
-
-    <div id="app" style="display:none;">
+    <div id="app">
 
         <!-- Header -->
         <div class="header">
             <h1>Task Recorder</h1>
-            <div style="display:flex; align-items:center; gap:0.5rem;">
-                <a href="https://sndezoysa.github.io/taskrecorder/dashboard/"
-                   target="_blank"
-                   style="color:rgba(255,255,255,0.8); font-size:0.75rem; text-decoration:none; letter-spacing:0.3px;">
-                    📊 Dashboard ↗
-                </a>
-                <span style="color:rgba(255,255,255,0.4);">|</span>
-                <button onclick="signOut()" style="background:none; border:none; color:rgba(255,255,255,0.7); font-size:0.72rem; cursor:pointer; padding:0; font-family:inherit;">Sign out</button>
-            </div>
+            <a href="https://sndezoysa.github.io/taskrecorder/dashboard/"
+               target="_blank"
+               style="color:rgba(255,255,255,0.8); font-size:0.75rem; text-decoration:none; letter-spacing:0.3px;">
+                📊 Dashboard ↗
+            </a>
         </div>
 
         <!-- Tabs -->

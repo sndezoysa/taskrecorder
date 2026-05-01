@@ -9,7 +9,6 @@
     <script src="https://cdnjs.cloudflare.com/ajax/libs/Chart.js/3.9.1/chart.min.js"></script>
     <script src="https://www.gstatic.com/firebasejs/10.12.0/firebase-app-compat.js"></script>
     <script src="https://www.gstatic.com/firebasejs/10.12.0/firebase-firestore-compat.js"></script>
-    <script src="https://www.gstatic.com/firebasejs/10.12.0/firebase-auth-compat.js"></script>
     <style>
         * { margin: 0; padding: 0; box-sizing: border-box; }
 
@@ -317,33 +316,12 @@
 </head>
 <body>
 
-<!-- Auth Screen -->
-<div id="authScreen" style="display:none; position:fixed; top:0; left:0; width:100%; height:100%; background:#f0f4f0; z-index:9999; align-items:center; justify-content:center;">
-    <div style="background:white; border-radius:12px; box-shadow:0 4px 20px rgba(0,0,0,0.15); padding:3rem 2.5rem; max-width:380px; width:90%; text-align:center;">
-        <div style="width:60px; height:60px; background:linear-gradient(135deg,#1a4d1a,#2d6b2d); border-radius:50%; margin:0 auto 1.5rem; display:flex; align-items:center; justify-content:center; color:white; font-size:1.8rem;">✓</div>
-        <h2 style="color:#1a4d1a; font-size:1.3rem; margin-bottom:0.5rem;">Task Recorder</h2>
-        <p style="color:#666; font-size:0.9rem; margin-bottom:2rem;">ATEX/IECEx Project Manager</p>
-        <p style="color:#888; font-size:0.85rem; margin-bottom:1.5rem;">Sign in to access your dashboard</p>
-        <button onclick="signIn()" style="background:#2d6b2d; color:white; border:none; padding:0.8rem 1.5rem; border-radius:6px; font-size:0.95rem; cursor:pointer; width:100%; font-family:inherit; display:flex; align-items:center; justify-content:center; gap:0.5rem;">
-            <span style="font-size:1.1rem;">🔵</span> Sign in with Google
-        </button>
-        <div id="authError" style="color:#c0392b; font-size:0.82rem; margin-top:0.8rem;"></div>
-    </div>
-</div>
-
-<!-- Main Content -->
-<div id="mainContent" style="display:none;">
-
 <div class="header">
     <div class="header-content">
         <h1>ATEX/IECEx Project Manager - Daily Tasks</h1>
         <div id="headerClock" class="last-updated"></div>
         <div style="display: flex; gap: 1rem; align-items: center; flex-wrap: wrap;">
             <!-- Status count badges -->
-            <div style="font-size:0.75rem; color:rgba(255,255,255,0.7); display:flex; align-items:center; gap:0.5rem;">
-                <span id="userEmail"></span>
-                <button onclick="signOut()" style="background:rgba(255,255,255,0.15); border:1px solid rgba(255,255,255,0.3); color:white; padding:0.2rem 0.6rem; border-radius:3px; font-size:0.72rem; cursor:pointer;">Sign out</button>
-            </div>
             <div class="status-counts">
                 <div class="sc-badge sc-all sc-selected" id="badgeAll" onclick="applyStatusQuickFilter('All')">
                     <span class="sc-label">All Tasks</span>
@@ -570,8 +548,6 @@
     };
     firebase.initializeApp(firebaseConfig);
     const db = firebase.firestore();
-    const auth = firebase.auth();
-    const googleProvider = new firebase.auth.GoogleAuthProvider();
 
     // ── State ─────────────────────────────────────────────────────────────
     let allTasks = [];
@@ -1351,29 +1327,6 @@
             }
         });
 
-    function signOut() {
-        auth.signOut().then(() => {
-            console.log('Signed out');
-        });
-    }
-
-    // ── Auth State Listener ───────────────────────────────────────────────
-    auth.onAuthStateChanged(function(user) {
-        const authScreen  = document.getElementById('authScreen');
-        const mainContent = document.getElementById('mainContent');
-        const userEmail   = document.getElementById('userEmail');
-
-        if (user) {
-            authScreen.style.display  = 'none';
-            mainContent.style.display = 'block';
-            userEmail.textContent     = user.email;
-            loadFromFirebase();
-        } else {
-            authScreen.style.display  = 'flex';
-            mainContent.style.display = 'none';
-        }
-    });
-
     // ── Clock ─────────────────────────────────────────────────────────────
     function updateClock() {
         const now = new Date();
@@ -1391,8 +1344,9 @@
         if (event.target === document.getElementById('statsModal')) closeStatistics();
         if (event.target === document.getElementById('kpiChartModal')) closeKpiChart();
     };
-</script>
 
-</div> <!-- end mainContent -->
+    // ── Auto load on page open ────────────────────────────────────────────
+    document.addEventListener('DOMContentLoaded', loadFromFirebase);
+</script>
 </body>
 </html>
