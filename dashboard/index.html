@@ -1319,13 +1319,14 @@
     function closeKpiChart() { document.getElementById('kpiChartModal').classList.remove('show'); }
 
     // ── Authentication ────────────────────────────────────────────────────
+    // Handle redirect result on page load
+    auth.getRedirectResult().catch(error => {
+        console.error('Redirect error:', error);
+    });
+
     function signIn() {
         document.getElementById('authError').textContent = '';
-        auth.signInWithPopup(googleProvider)
-            .catch(error => {
-                console.error('Sign in error:', error);
-                document.getElementById('authError').textContent = 'Sign in failed. Please try again.';
-            });
+        auth.signInWithRedirect(googleProvider);
     }
 
     function signOut() {

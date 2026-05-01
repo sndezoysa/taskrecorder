@@ -20,11 +20,7 @@ Office.onReady(function (info) {
 // ── Sign In ───────────────────────────────────────────────────────────
 function signIn() {
     document.getElementById('authError').textContent = '';
-    auth.signInWithPopup(googleProvider)
-        .catch(error => {
-            console.error('Sign in error:', error);
-            document.getElementById('authError').textContent = 'Sign in failed. Please try again.';
-        });
+    auth.signInWithRedirect(googleProvider);
 }
 
 // ── Sign Out ──────────────────────────────────────────────────────────
