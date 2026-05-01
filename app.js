@@ -20,7 +20,18 @@ Office.onReady(function (info) {
 // ── Sign In ───────────────────────────────────────────────────────────
 function signIn() {
     document.getElementById('authError').textContent = '';
-    auth.signInWithRedirect(googleProvider);
+    auth.signInWithPopup(googleProvider)
+        .catch(error => {
+            console.error('Popup error:', error.code);
+            if (error.code === 'auth/popup-blocked' ||
+                error.code === 'auth/popup-closed-by-user' ||
+                error.code === 'auth/cancelled-popup-request') {
+                document.getElementById('authError').textContent = 'Popup blocked — trying redirect...';
+                auth.signInWithRedirect(googleProvider);
+            } else {
+                document.getElementById('authError').textContent = 'Sign in failed: ' + error.message;
+            }
+        });
 }
 
 // ── Sign Out ──────────────────────────────────────────────────────────

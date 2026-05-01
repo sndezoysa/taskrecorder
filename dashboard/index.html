@@ -1319,15 +1319,37 @@
     function closeKpiChart() { document.getElementById('kpiChartModal').classList.remove('show'); }
 
     // ── Authentication ────────────────────────────────────────────────────
-    // Handle redirect result on page load
-    auth.getRedirectResult().catch(error => {
-        console.error('Redirect error:', error);
-    });
-
     function signIn() {
         document.getElementById('authError').textContent = '';
-        auth.signInWithRedirect(googleProvider);
+
+        // Try popup first — works on Chrome, Firefox, Edge
+        auth.signInWithPopup(googleProvider)
+            .catch(error => {
+                console.error('Popup error:', error.code);
+                // If popup blocked (Safari) — fall back to redirect
+                if (error.code === 'auth/popup-blocked' ||
+                    error.code === 'auth/popup-closed-by-user' ||
+                    error.code === 'auth/cancelled-popup-request') {
+                    document.getElementById('authError').textContent = 'Popup blocked — trying redirect...';
+                    auth.signInWithRedirect(googleProvider);
+                } else {
+                    document.getElementById('authError').textContent = 'Sign in failed: ' + error.message;
+                }
+            });
     }
+
+    // Handle redirect result in case redirect was used
+    auth.getRedirectResult()
+        .then(result => {
+            if (result && result.user) {
+                console.log('Signed in via redirect:', result.user.email);
+            }
+        })
+        .catch(error => {
+            if (error.code !== 'auth/no-auth-event') {
+                console.error('Redirect result error:', error);
+            }
+        });
 
     function signOut() {
         auth.signOut().then(() => {
