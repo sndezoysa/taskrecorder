@@ -15,6 +15,15 @@ function showTab(tabName) {
     });
     document.getElementById('tab-' + tabName).classList.add('active');
     event.target.classList.add('active');
+
+    // Auto load tasks when switching tabs
+    if (tabName === 'pause') {
+        loadActiveTasks('pause');
+    } else if (tabName === 'resume') {
+        loadPausedTasks();
+    } else if (tabName === 'close') {
+        loadActiveTasks('close');
+    }
 }
 
 // ── Extract Full Email Data (Create tab) ──────────────────────────────
