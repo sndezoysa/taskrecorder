@@ -2,8 +2,35 @@
 Office.onReady(function (info) {
     if (info.host === Office.HostType.Outlook) {
         console.log("Task Recorder add-in loaded successfully.");
+
+        // Check auth state on load
+        auth.onAuthStateChanged(function(user) {
+            if (user) {
+                document.getElementById('authScreen').style.display = 'none';
+                document.getElementById('app').style.display = 'block';
+                console.log('Signed in as:', user.email);
+            } else {
+                document.getElementById('authScreen').style.display = 'block';
+                document.getElementById('app').style.display = 'none';
+            }
+        });
     }
 });
+
+// ── Sign In ───────────────────────────────────────────────────────────
+function signIn() {
+    document.getElementById('authError').textContent = '';
+    auth.signInWithPopup(googleProvider)
+        .catch(error => {
+            console.error('Sign in error:', error);
+            document.getElementById('authError').textContent = 'Sign in failed. Please try again.';
+        });
+}
+
+// ── Sign Out ──────────────────────────────────────────────────────────
+function signOut() {
+    auth.signOut();
+}
 
 // ── Tab Switching ─────────────────────────────────────────────────────
 function showTab(tabName) {
