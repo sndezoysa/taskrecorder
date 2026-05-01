@@ -1,4 +1,4 @@
-/ Firebase Configuration
+// Firebase Configuration
 const firebaseConfig = {
     apiKey: "AIzaSyB8VKEBRGybHfgRJJTT2MlBl4kJK8y1PX8",
     authDomain: "taskrecorder-9e9c3.firebaseapp.com",
