@@ -42,6 +42,14 @@ function extractEmail() {
     const received = new Date(item.dateTimeCreated);
     document.getElementById('txtDateTime').value = formatDateTime(received);
 
+    // Auto-select QMS Task if sender is the QMS platform
+    const senderEmail = (item.from.emailAddress || '').toLowerCase();
+    if (senderEmail === 'noreplykc@makeenenergy.com') {
+        document.querySelector('input[name="taskType"][value="QMS Task"]').checked = true;
+    } else {
+        document.querySelector('input[name="taskType"][value="Requested"]').checked = true;
+    }
+
     document.getElementById('btnCreate').disabled = false;
 }
 

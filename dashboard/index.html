@@ -99,6 +99,8 @@
         .type-badge { display: inline-block; padding: 0.2rem 0.6rem; border-radius: 3px; font-size: 0.78rem; font-weight: 600; }
         .type-badge.requested { background-color: #e8f0fe; color: #1a56a0; border: 1px solid #90b8f8; }
         .type-badge.created { background-color: #fce8ff; color: #7b1fa2; border: 1px solid #ce93d8; }
+        .type-badge.qms-task { background-color: #fff3e0; color: #e65100; border: 1px solid #ffcc80; }
+        .task-number.qms-task { color: #e65100; }
 
         .status { display: inline-block; padding: 0.3rem 0.6rem; border-radius: 4px; font-size: 0.8rem; font-weight: 600; text-align: center; min-width: 70px; }
         .status.active { background-color: var(--active-bg); color: var(--active-green); border: 1px solid #7ec57e; }
@@ -208,6 +210,7 @@
             .task-number { font-weight: 600; color: #111 !important; }
             .task-number.requested { color: #1a56a0 !important; print-color-adjust: exact; -webkit-print-color-adjust: exact; }
             .task-number.created   { color: #7b1fa2 !important; print-color-adjust: exact; -webkit-print-color-adjust: exact; }
+            .task-number.qms-task  { color: #e65100 !important; print-color-adjust: exact; -webkit-print-color-adjust: exact; }
 
             /* Status badges */
             .status { color: #111 !important; font-weight: 700 !important; border: 1px solid #aaa !important; print-color-adjust: exact; -webkit-print-color-adjust: exact; }
@@ -342,6 +345,9 @@
                 </label>
                 <label style="font-size: 0.85rem; display:flex; align-items:center; gap:0.3rem; cursor:pointer;">
                     <input type="radio" name="taskTypeFilter" value="Created" onchange="filterData()"> Created
+                </label>
+                <label style="font-size: 0.85rem; display:flex; align-items:center; gap:0.3rem; cursor:pointer;">
+                    <input type="radio" name="taskTypeFilter" value="QMS Task" onchange="filterData()"> QMS Task
                 </label>
             </div>
         </div>
@@ -694,7 +700,7 @@
 
                 return `
                     <tr onclick="showCommentPanel(event, \`${commentEscaped}\`, '${String(task.taskId)}')" style="cursor:pointer;">
-                        <td class="task-number ${String(task.taskType).toLowerCase()}" style="border-left:${getPriorityBorder(task.priorityScore)}; padding-left:0.6rem;">${String(task.taskId)}</td>
+                        <td class="task-number ${String(task.taskType).toLowerCase().replace(' ', '-')}" style="border-left:${getPriorityBorder(task.priorityScore)}; padding-left:0.6rem;">${String(task.taskId)}</td>
                         <td class="task-number">${String(task.projectId || '-')}</td>
                         <td class="task-title" title="${String(task.subject)}">${String(task.subject).substring(0, 35)}${task.subject.length > 35 ? '...' : ''}</td>
                         <td class="sender-cell" title="${String(task.sender)}">${String(task.sender).split(' ').slice(0, 2).join(' ')}</td>
