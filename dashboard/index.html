@@ -1,0 +1,858 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>ATEX/IECEx Project Manager - Daily Tasks</title>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/moment.js/2.29.4/moment.min.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/Chart.js/3.9.1/chart.min.js"></script>
+    <script src="https://www.gstatic.com/firebasejs/10.12.0/firebase-app-compat.js"></script>
+    <script src="https://www.gstatic.com/firebasejs/10.12.0/firebase-firestore-compat.js"></script>
+    <style>
+        * { margin: 0; padding: 0; box-sizing: border-box; }
+
+        :root {
+            --primary-dark: #1a4d1a;
+            --primary-medium: #2d6b2d;
+            --primary-light: #4a8a4a;
+            --accent-pale: #d4e4d4;
+            --text-dark: #1a1a1a;
+            --text-light: #f5f5f0;
+            --active-green: #2d7a2d;
+            --active-bg: #e8f5e8;
+            --paused-orange: #d97706;
+            --paused-bg: #fef3e2;
+            --closed-blue: #0d47a1;
+            --closed-bg: #e3f2fd;
+            --gray-light: #f0f0f0;
+            --gray-medium: #e0e0e0;
+            --gray-dark: #666666;
+            --background: #fafaf8;
+        }
+
+        body { font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; background-color: var(--background); color: var(--text-dark); line-height: 1.6; }
+
+        .header { background: linear-gradient(135deg, var(--primary-dark) 0%, var(--primary-medium) 100%); color: var(--text-light); padding: 1rem 2rem; box-shadow: 0 2px 4px rgba(26,77,26,0.2); border-bottom: 2px solid var(--primary-light); }
+        .header-content { max-width: 1600px; margin: 0 auto; display: flex; justify-content: space-between; align-items: center; gap: 2rem; flex-wrap: wrap; }
+        .header h1 { font-size: 1.5rem; font-weight: 600; letter-spacing: -0.5px; }
+
+        .kpi-box { background: rgba(255,255,255,0.12); padding: 0.7rem 1.5rem; border-radius: 6px; backdrop-filter: blur(10px); border: 1px solid rgba(255,255,255,0.15); cursor: pointer; transition: all 0.3s; min-width: 160px; }
+        .kpi-box:first-child { border: 2px solid var(--accent-pale); background: rgba(212,228,212,0.15); }
+        .kpi-box:hover { background: rgba(255,255,255,0.18); transform: translateY(-2px); }
+        .kpi-label { font-size: 0.75rem; opacity: 0.85; margin-bottom: 0.15rem; }
+        .kpi-main { font-size: 1.3rem; font-weight: 700; color: #fff; }
+        .kpi-sub { font-size: 0.65rem; opacity: 0.75; margin-top: 0.1rem; }
+
+        .status-counts { display: flex; gap: 0.6rem; align-items: center; }
+        .sc-badge { display: flex; flex-direction: column; align-items: center; background: rgba(255,255,255,0.12); border: 1px solid rgba(255,255,255,0.18); border-radius: 6px; padding: 0.45rem 1rem; min-width: 80px; cursor: pointer; transition: all 0.2s; }
+        .sc-badge:hover { background: rgba(255,255,255,0.22); transform: translateY(-1px); }
+        .sc-badge.sc-all { border-color: rgba(255,255,255,0.4); }
+        .sc-badge.sc-active { border-color: #7ec57e; }
+        .sc-badge.sc-paused { border-color: #fcd34d; }
+        .sc-badge.sc-closed { border-color: #90caf9; }
+        .sc-badge.sc-selected { transform: translateY(-2px); box-shadow: 0 3px 10px rgba(0,0,0,0.25); }
+        .sc-badge.sc-all.sc-selected { background: rgba(255,255,255,0.28) !important; border-width: 2px; }
+        .sc-badge.sc-active.sc-selected { background: rgba(126,197,126,0.25) !important; border-width: 2px; }
+        .sc-badge.sc-paused.sc-selected { background: rgba(252,211,77,0.2) !important; border-width: 2px; }
+        .sc-badge.sc-closed.sc-selected { background: rgba(144,202,249,0.2) !important; border-width: 2px; }
+        .sc-label { font-size: 0.68rem; opacity: 0.8; text-transform: uppercase; letter-spacing: 0.04em; }
+        .sc-count { font-size: 1.35rem; font-weight: 700; color: #fff; line-height: 1.1; }
+        .sc-badge.sc-active .sc-count { color: #a8e6a8; }
+        .sc-badge.sc-paused .sc-count { color: #fde68a; }
+        .sc-badge.sc-closed .sc-count { color: #90caf9; }
+
+        .container { max-width: 1600px; margin: 0 auto; padding: 1.5rem; }
+
+        .controls { background: white; padding: 1rem; border-radius: 8px; margin-bottom: 1.5rem; box-shadow: 0 1px 3px rgba(0,0,0,0.08); border: 1px solid var(--gray-medium); }
+        .controls-wrapper { display: flex; gap: 1rem; align-items: flex-end; flex-wrap: wrap; }
+
+        .form-group { display: flex; flex-direction: column; gap: 0.3rem; }
+        .form-group label { font-size: 0.85rem; font-weight: 500; color: var(--text-dark); }
+        .form-group input, .form-group select { padding: 0.5rem 0.7rem; border: 1px solid var(--gray-medium); border-radius: 4px; font-size: 0.9rem; font-family: inherit; background-color: white; cursor: pointer; }
+        .form-group input:focus, .form-group select:focus { outline: none; border-color: var(--primary-light); }
+
+        .button-group { display: flex; gap: 0.5rem; flex-wrap: wrap; }
+        button { padding: 0.5rem 1rem; border: none; border-radius: 4px; font-size: 0.9rem; font-weight: 500; cursor: pointer; transition: all 0.3s; font-family: inherit; }
+        .btn-primary { background-color: var(--primary-medium); color: white; }
+        .btn-primary:hover { background-color: var(--primary-dark); transform: translateY(-1px); }
+        .btn-secondary { background-color: var(--gray-light); color: var(--text-dark); border: 1px solid var(--gray-medium); }
+        .btn-secondary:hover { background-color: var(--gray-medium); }
+
+        .table-section { background: white; border-radius: 8px; box-shadow: 0 1px 3px rgba(0,0,0,0.08); overflow: hidden; border: 1px solid var(--gray-medium); }
+        .table-wrapper { overflow-x: auto; }
+        table { width: 100%; border-collapse: collapse; font-size: 0.9rem; }
+        thead { background-color: #f5f5f5; position: sticky; top: 0; z-index: 10; }
+        th { padding: 0.8rem; text-align: left; font-weight: 600; color: var(--text-dark); border-bottom: 2px solid var(--gray-medium); user-select: none; cursor: pointer; white-space: nowrap; }
+        th:hover { background-color: #eeeeee; }
+        .sort-icon { display: inline-block; margin-left: 0.3rem; font-size: 0.7rem; opacity: 0.5; }
+        .sort-icon.active { opacity: 1; color: var(--primary-light); }
+        td { padding: 0.8rem; border-bottom: 1px solid var(--gray-light); font-size: 0.9rem; }
+        tbody tr:hover { background-color: #fafaf8; }
+
+        .task-number { font-weight: 600; font-size: 0.85rem; }
+        .task-number.requested { color: #1a56a0; }
+        .task-number.created { color: #7b1fa2; }
+        .task-title { font-weight: 500; min-width: 220px; max-width: 280px; word-break: break-word; }
+        .sender-cell { max-width: 130px; word-break: break-word; }
+        .site-badge { display: inline-block; padding: 0.2rem 0.6rem; background-color: #f0f0f0; border-radius: 3px; font-size: 0.8rem; font-weight: 500; }
+        .type-badge { display: inline-block; padding: 0.2rem 0.6rem; border-radius: 3px; font-size: 0.78rem; font-weight: 600; }
+        .type-badge.requested { background-color: #e8f0fe; color: #1a56a0; border: 1px solid #90b8f8; }
+        .type-badge.created { background-color: #fce8ff; color: #7b1fa2; border: 1px solid #ce93d8; }
+
+        .status { display: inline-block; padding: 0.3rem 0.6rem; border-radius: 4px; font-size: 0.8rem; font-weight: 600; text-align: center; min-width: 70px; }
+        .status.active { background-color: var(--active-bg); color: var(--active-green); border: 1px solid #7ec57e; }
+        .status.paused { background-color: var(--paused-bg); color: var(--paused-orange); border: 1px solid #fcd34d; }
+        .status.closed { background-color: var(--closed-bg); color: var(--closed-blue); border: 1px solid #90caf9; }
+
+        .numeric { text-align: center; font-weight: 500; }
+
+        .time-bar-container { display: flex; align-items: center; gap: 0.5rem; min-width: 200px; }
+        .time-bar { position: relative; flex: 1; height: 24px; border-radius: 3px; overflow: hidden; background-color: #e8e8e8; border: 1px solid #d0d0d0; }
+        .time-work { position: absolute; left: 0; top: 0; height: 100%; background-color: var(--primary-light); display: flex; align-items: center; justify-content: center; color: white; font-size: 0.7rem; font-weight: 600; }
+        .time-wait { position: absolute; right: 0; top: 0; height: 100%; background-color: #a8c8a8; display: flex; align-items: center; justify-content: center; color: white; font-size: 0.7rem; font-weight: 600; }
+        .time-label { font-size: 0.8rem; color: var(--gray-dark); min-width: 45px; text-align: right; }
+
+        .comment-panel { position: fixed; background-color: rgba(20,50,20,0.97); color: #f0f5f0; padding: 0.75rem 1rem; border-radius: 6px; font-size: 0.82rem; font-family: 'Segoe UI', sans-serif; z-index: 9999; width: 380px; max-height: 280px; overflow-y: auto; box-shadow: 0 4px 20px rgba(0,0,0,0.35); line-height: 1.55; border-left: 3px solid var(--primary-light); white-space: pre-wrap; word-break: break-word; }
+        .comment-panel-header { font-size: 0.72rem; font-weight: 600; opacity: 0.65; margin-bottom: 0.5rem; text-transform: uppercase; letter-spacing: 0.05em; }
+
+        .empty-state { padding: 3rem; text-align: center; color: #999; }
+
+        .spinner { border: 3px solid var(--gray-light); border-top: 3px solid var(--primary-light); border-radius: 50%; width: 40px; height: 40px; animation: spin 1s linear infinite; margin: 0 auto 1rem; }
+        @keyframes spin { 0% { transform: rotate(0deg); } 100% { transform: rotate(360deg); } }
+
+        @keyframes modalFadeIn { from { opacity: 0; transform: scale(0.96); } to { opacity: 1; transform: scale(1); } }
+        .modal { display: none; position: fixed; z-index: 2000; left: 0; top: 0; width: 100%; height: 100%; background-color: rgba(0,0,0,0.4); align-items: center; justify-content: center; }
+        .modal.show { display: flex; }
+        .modal.show .modal-content { animation: modalFadeIn 0.22s ease-out both; }
+        .modal-content { background-color: white; padding: 2rem; border-radius: 8px; box-shadow: 0 4px 20px rgba(0,0,0,0.2); max-width: 600px; width: 90%; max-height: 80vh; overflow-y: auto; }
+        .modal-header { font-size: 1.3rem; font-weight: 600; margin-bottom: 1rem; color: var(--primary-dark); }
+        .close-modal { float: right; font-size: 1.5rem; cursor: pointer; color: var(--gray-dark); line-height: 1; }
+        .close-modal:hover { color: var(--text-dark); }
+
+        .stats-grid { display: grid; grid-template-columns: repeat(3, 1fr); gap: 1rem; margin-bottom: 1.5rem; }
+        .stat-box { background: var(--gray-light); border-radius: 6px; padding: 1rem; text-align: center; }
+        .stat-label { font-size: 0.8rem; color: var(--gray-dark); margin-bottom: 0.3rem; }
+        .stat-value { font-size: 1.4rem; font-weight: 700; color: var(--primary-dark); }
+
+        .kpi-stats-strip { display: flex; gap: 1rem; flex-wrap: wrap; margin-bottom: 1.5rem; }
+        .kpi-stat-box { background: var(--gray-light); border-radius: 6px; padding: 0.8rem 1.2rem; text-align: center; flex: 1; min-width: 100px; }
+        .kpi-stat-label { font-size: 0.75rem; color: var(--gray-dark); margin-bottom: 0.2rem; }
+        .kpi-stat-value { font-size: 1.2rem; font-weight: 700; color: var(--primary-dark); }
+
+        .last-updated { font-size: 0.75rem; opacity: 0.75; white-space: nowrap; }
+
+        @media (max-width: 1024px) {
+            .header-content { flex-direction: column; align-items: flex-start; }
+            .controls-wrapper { flex-direction: column; }
+            th, td { padding: 0.6rem; font-size: 0.8rem; }
+        }
+    </style>
+</head>
+<body>
+
+<div class="header">
+    <div class="header-content">
+        <h1>ATEX/IECEx Project Manager - Daily Tasks</h1>
+        <div id="headerClock" class="last-updated"></div>
+        <div style="display: flex; gap: 1rem; align-items: center; flex-wrap: wrap;">
+            <!-- Status count badges -->
+            <div class="status-counts">
+                <div class="sc-badge sc-all sc-selected" id="badgeAll" onclick="applyStatusQuickFilter('All')">
+                    <span class="sc-label">All Tasks</span>
+                    <span class="sc-count" id="scAll">-</span>
+                </div>
+                <div class="sc-badge sc-active" id="badgeActive" onclick="applyStatusQuickFilter('Active')">
+                    <span class="sc-label">Active</span>
+                    <span class="sc-count" id="scActive">-</span>
+                </div>
+                <div class="sc-badge sc-paused" id="badgePaused" onclick="applyStatusQuickFilter('Paused')">
+                    <span class="sc-label">Paused</span>
+                    <span class="sc-count" id="scPaused">-</span>
+                </div>
+                <div class="sc-badge sc-closed" id="badgeClosed" onclick="applyStatusQuickFilter('Closed')">
+                    <span class="sc-label">Closed</span>
+                    <span class="sc-count" id="scClosed">-</span>
+                </div>
+            </div>
+            <div style="width:1px; background:rgba(255,255,255,0.2); height:40px;"></div>
+            <!-- KPI boxes -->
+            <div class="kpi-box kpi-highlight" onclick="showKpiChart('closedWork')">
+                <div class="kpi-label">Avg Work (Closed)</div>
+                <div class="kpi-main" id="kpiClosedWorkTime">-</div>
+                <div class="kpi-sub">days</div>
+            </div>
+            <div class="kpi-box" onclick="showKpiChart('allWork')">
+                <div class="kpi-label">Avg Work (All)</div>
+                <div class="kpi-main" id="kpiAllWorkTime">-</div>
+                <div class="kpi-sub">days</div>
+            </div>
+            <div class="kpi-box" onclick="showKpiChart('allTotal')">
+                <div class="kpi-label">Avg Total Time</div>
+                <div class="kpi-main" id="kpiAllTotalTime">-</div>
+                <div class="kpi-sub">days</div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<div class="container">
+    <div class="controls">
+        <div class="controls-wrapper">
+            <div class="button-group">
+                <button class="btn-primary" onclick="loadFromFirebase()">🔄 Refresh Data</button>
+                <button class="btn-secondary" onclick="showStatistics()">📊 Statistics</button>
+            </div>
+            <div id="loadStatus" style="font-size: 0.85rem; color: var(--gray-dark); align-self: center;"></div>
+            <div style="display: flex; align-items: center; gap: 0.5rem; margin-left: auto;">
+                <input type="checkbox" id="enableDateFilter" onchange="toggleDateFilter()">
+                <label for="enableDateFilter" style="margin-bottom: 0; font-size:0.85rem;">Filter by Date Range</label>
+            </div>
+            <div style="display: flex; align-items: center; gap: 1rem; margin-left: 1.5rem; padding-left: 1.5rem; border-left: 1px solid var(--gray-medium);">
+                <span style="font-size: 0.85rem; font-weight: 500;">Task Type:</span>
+                <label style="font-size: 0.85rem; display:flex; align-items:center; gap:0.3rem; cursor:pointer;">
+                    <input type="radio" name="taskTypeFilter" value="All" checked onchange="filterData()"> All
+                </label>
+                <label style="font-size: 0.85rem; display:flex; align-items:center; gap:0.3rem; cursor:pointer;">
+                    <input type="radio" name="taskTypeFilter" value="Requested" onchange="filterData()"> Requested
+                </label>
+                <label style="font-size: 0.85rem; display:flex; align-items:center; gap:0.3rem; cursor:pointer;">
+                    <input type="radio" name="taskTypeFilter" value="Created" onchange="filterData()"> Created
+                </label>
+            </div>
+        </div>
+        <div id="dateFilterGroup" style="display: none; margin-top: 1rem; padding-top: 1rem; border-top: 1px solid var(--gray-medium);">
+            <div style="display: flex; gap: 1rem; align-items: flex-end; flex-wrap: wrap;">
+                <div class="form-group">
+                    <label>Select Year</label>
+                    <select id="yearSelect" onchange="setYearDateRange()">
+                        <option value="">-- Custom Date Range --</option>
+                        <option value="2024">2024</option>
+                        <option value="2025">2025</option>
+                        <option value="2026">2026</option>
+                        <option value="2027">2027</option>
+                        <option value="2028">2028</option>
+                    </select>
+                </div>
+                <div class="form-group">
+                    <label>From Date</label>
+                    <input type="date" id="startDate" onchange="filterData()">
+                </div>
+                <div class="form-group">
+                    <label>To Date</label>
+                    <input type="date" id="endDate" onchange="filterData()">
+                </div>
+                <button class="btn-secondary" onclick="resetFilter()">Reset</button>
+            </div>
+        </div>
+    </div>
+
+    <div class="table-section">
+        <div class="table-wrapper">
+            <table id="taskTable">
+                <thead>
+                    <tr>
+                        <th onclick="sortTable('taskId')" style="width:55px;">Task No <span class="sort-icon">↕️</span></th>
+                        <th onclick="sortTable('projectId')" style="width:100px;">Project ID <span class="sort-icon">↕️</span></th>
+                        <th onclick="sortTable('subject')">Title <span class="sort-icon">↕️</span></th>
+                        <th onclick="sortTable('sender')">Requester <span class="sort-icon">↕️</span></th>
+                        <th onclick="sortTable('site')">Company/Site <span class="sort-icon">↕️</span></th>
+                        <th onclick="sortTable('createdDate')">Received Date <span class="sort-icon">↕️</span></th>
+                        <th onclick="sortTable('lastUpdated')">Last Updated <span class="sort-icon">↕️</span></th>
+                        <th onclick="sortTable('status')">Status <span class="sort-icon">↕️</span></th>
+                        <th onclick="sortTable('daysTaken')">Days Taken <span class="sort-icon">↕️</span></th>
+                        <th onclick="sortTable('workTimeDays')">Work Time <span class="sort-icon">↕️</span></th>
+                        <th>Time Breakdown</th>
+                    </tr>
+                </thead>
+                <tbody id="tableBody">
+                    <tr>
+                        <td colspan="11" class="empty-state">
+                            <div class="spinner"></div>
+                            <p>Loading tasks from Firebase...</p>
+                        </td>
+                    </tr>
+                </tbody>
+            </table>
+        </div>
+    </div>
+</div>
+
+<!-- Statistics Modal -->
+<div id="statsModal" class="modal">
+    <div class="modal-content">
+        <span class="close-modal" onclick="closeStatistics()">&times;</span>
+        <div class="modal-header">Work Time Statistics</div>
+        <div class="stats-grid">
+            <div class="stat-box"><div class="stat-label">Average Work Time</div><div class="stat-value" id="statsAvg">-</div></div>
+            <div class="stat-box"><div class="stat-label">Total Average Time</div><div class="stat-value" id="statsTotal">-</div></div>
+            <div class="stat-box"><div class="stat-label">Standard Deviation</div><div class="stat-value" id="statsStdDev">-</div></div>
+            <div class="stat-box"><div class="stat-label">Median Work Time</div><div class="stat-value" id="statsMedian">-</div></div>
+            <div class="stat-box"><div class="stat-label">Min Work Time</div><div class="stat-value" id="statsMin">-</div></div>
+            <div class="stat-box"><div class="stat-label">Max Work Time</div><div class="stat-value" id="statsMax">-</div></div>
+        </div>
+        <canvas id="statsChart"></canvas>
+    </div>
+</div>
+
+<!-- KPI Chart Modal -->
+<div id="kpiChartModal" class="modal">
+    <div class="modal-content" style="max-width:820px; width:95%;">
+        <span class="close-modal" onclick="closeKpiChart()">&times;</span>
+        <div class="modal-header" id="kpiChartTitle">Task Breakdown</div>
+        <div style="font-size:0.85rem; color:#666; margin-bottom:1rem;" id="kpiChartSubtitle"></div>
+        <div class="kpi-stats-strip" id="kpiStatsStrip"></div>
+        <div style="position:relative; height:380px;">
+            <canvas id="kpiChart"></canvas>
+        </div>
+    </div>
+</div>
+
+<script>
+    // ── Firebase Configuration ────────────────────────────────────────────
+    const firebaseConfig = {
+        apiKey: "AIzaSyB8VKEBRGybHfgRJJTT2MlBl4kJK8y1PX8",
+        authDomain: "taskrecorder-9e9c3.firebaseapp.com",
+        projectId: "taskrecorder-9e9c3",
+        storageBucket: "taskrecorder-9e9c3.firebasestorage.app",
+        messagingSenderId: "416679395956",
+        appId: "1:416679395956:web:00755cd5f74785b5aa4721"
+    };
+    firebase.initializeApp(firebaseConfig);
+    const db = firebase.firestore();
+
+    // ── State ─────────────────────────────────────────────────────────────
+    let allTasks = [];
+    let filteredTasks = [];
+    let currentSort = { field: 'taskId', direction: 'asc' };
+    let statsChart = null;
+    let kpiChart = null;
+    let activeCommentPanel = null;
+    let panelHideTimer = null;
+    let panelWatcherFn = null;
+    let statusFilterSelected = new Set(['active', 'paused', 'closed']);
+
+    // ── Firebase Data Loading ─────────────────────────────────────────────
+    async function loadFromFirebase() {
+        const tbody = document.getElementById('tableBody');
+        const loadStatus = document.getElementById('loadStatus');
+
+        tbody.innerHTML = `<tr><td colspan="11" class="empty-state"><div class="spinner"></div><p>Loading tasks from Firebase...</p></td></tr>`;
+        loadStatus.textContent = 'Loading...';
+
+        try {
+            const snapshot = await db.collection('tasks').orderBy('taskId', 'asc').get();
+
+            allTasks = snapshot.docs.map(doc => {
+                const d = doc.data();
+
+                // Parse date strings from Firebase (format: "yyyy-mm-dd hh:mm")
+                function parseDate(str) {
+                    if (!str || str === '') return null;
+                    const parsed = new Date(str.replace(' ', 'T'));
+                    return isNaN(parsed.getTime()) ? null : parsed;
+                }
+
+                function formatDateForDisplay(date) {
+                    if (!date) return 'N/A';
+                    const y = date.getFullYear();
+                    const m = String(date.getMonth() + 1).padStart(2, '0');
+                    const day = String(date.getDate()).padStart(2, '0');
+                    return `${y}-${m}-${day}`;
+                }
+
+                const createdDate      = parseDate(d.createdDateTime);
+                const activateTimeDate = parseDate(d.activateTime);
+                const inactivateDate   = parseDate(d.inactivateTime);
+
+                const lastUpdatedDate = inactivateDate || activateTimeDate || createdDate;
+
+                // Days taken: created → close (if closed) or now
+                let daysTaken = 0;
+                if (createdDate) {
+                    const st = String(d.status || '').toLowerCase();
+                    const endDate = (st === 'closed' && inactivateDate) ? inactivateDate : new Date();
+                    daysTaken = (endDate - createdDate) / (1000 * 60 * 60 * 24);
+                }
+
+                const workTimeMin = parseInt(d.workTimeMin || 0);
+
+                return {
+                    taskId:           String(d.taskId || ''),
+                    projectId:        String(d.projectId || '-'),
+                    subject:          String(d.subject || ''),
+                    sender:           String(d.senderName || ''),
+                    site:             String(d.site || 'MEDK'),
+                    createdDate:      formatDateForDisplay(createdDate),
+                    lastUpdated:      formatDateForDisplay(lastUpdatedDate),
+                    status:           String(d.status || 'Active'),
+                    activateTimeDate: activateTimeDate,
+                    workTimeMinStored: workTimeMin,
+                    workTimeDays:     workTimeMin / (24 * 60),
+                    daysTaken:        daysTaken,
+                    comments:         String(d.comments || ''),
+                    taskType:         String(d.taskType || 'Requested'),
+                    priorityScore:    parseInt(d.priorityScore || 5)
+                };
+            }).filter(t => t.taskId);
+
+            const now = new Date();
+            const pad = n => String(n).padStart(2, '0');
+            loadStatus.textContent = `✅ ${allTasks.length} tasks loaded — ${now.getFullYear()}-${pad(now.getMonth()+1)}-${pad(now.getDate())} ${pad(now.getHours())}:${pad(now.getMinutes())}`;
+
+            filteredTasks = [...allTasks];
+            filterData();
+            sortTable('taskId');
+
+        } catch (error) {
+            console.error('Firebase error:', error);
+            tbody.innerHTML = `<tr><td colspan="11" class="empty-state"><p>❌ Error loading data: ${error.message}</p></td></tr>`;
+            loadStatus.textContent = '❌ Load failed';
+        }
+    }
+
+    // ── Status Filter ─────────────────────────────────────────────────────
+    function updateBadgeHighlight() {
+        const allOn = statusFilterSelected.size === 3;
+        document.getElementById('badgeAll').classList.toggle('sc-selected', allOn);
+        document.getElementById('badgeActive').classList.toggle('sc-selected', !allOn && statusFilterSelected.has('active'));
+        document.getElementById('badgePaused').classList.toggle('sc-selected', !allOn && statusFilterSelected.has('paused'));
+        document.getElementById('badgeClosed').classList.toggle('sc-selected', !allOn && statusFilterSelected.has('closed'));
+    }
+
+    function applyStatusQuickFilter(status) {
+        if (status === 'All') {
+            statusFilterSelected = new Set(['active', 'paused', 'closed']);
+        } else {
+            const s = status.toLowerCase();
+            if (statusFilterSelected.size === 1 && statusFilterSelected.has(s)) {
+                statusFilterSelected = new Set(['active', 'paused', 'closed']);
+            } else {
+                statusFilterSelected = new Set([s]);
+            }
+        }
+        updateBadgeHighlight();
+        filterData();
+    }
+
+    // ── Date Filter ───────────────────────────────────────────────────────
+    function toggleDateFilter() {
+        const checkbox = document.getElementById('enableDateFilter');
+        const filterGroup = document.getElementById('dateFilterGroup');
+        if (checkbox.checked) {
+            filterGroup.style.display = 'block';
+            const today = new Date();
+            const thirtyDaysAgo = new Date(today.getTime() - (30 * 24 * 60 * 60 * 1000));
+            document.getElementById('startDate').valueAsDate = thirtyDaysAgo;
+            document.getElementById('endDate').valueAsDate = today;
+        } else {
+            filterGroup.style.display = 'none';
+        }
+        filterData();
+    }
+
+    function setYearDateRange() {
+        const year = parseInt(document.getElementById('yearSelect').value);
+        if (year) {
+            document.getElementById('startDate').value = `${year}-01-01`;
+            document.getElementById('endDate').value = `${year}-12-31`;
+        } else {
+            document.getElementById('startDate').value = '';
+            document.getElementById('endDate').value = '';
+        }
+        filterData();
+    }
+
+    function resetFilter() {
+        const today = new Date();
+        const thirtyDaysAgo = new Date(today.getTime() - (30 * 24 * 60 * 60 * 1000));
+        document.getElementById('startDate').valueAsDate = thirtyDaysAgo;
+        document.getElementById('endDate').valueAsDate = today;
+        filterData();
+    }
+
+    function getTaskTypeFilter() {
+        const selected = document.querySelector('input[name="taskTypeFilter"]:checked');
+        return selected ? selected.value : 'All';
+    }
+
+    function filterData() {
+        const checkbox = document.getElementById('enableDateFilter');
+        const taskTypeFilter = getTaskTypeFilter();
+
+        let tasks = allTasks;
+
+        if (taskTypeFilter !== 'All') {
+            tasks = tasks.filter(t => String(t.taskType).toLowerCase() === taskTypeFilter.toLowerCase());
+        }
+
+        if (checkbox.checked) {
+            const startDate = new Date(document.getElementById('startDate').value);
+            const endDate = new Date(document.getElementById('endDate').value);
+            endDate.setHours(23, 59, 59);
+            tasks = tasks.filter(t => {
+                const taskDate = new Date(t.createdDate);
+                return taskDate >= startDate && taskDate <= endDate;
+            });
+        }
+
+        if (statusFilterSelected.size < 3) {
+            tasks = tasks.filter(t => statusFilterSelected.has(String(t.status).toLowerCase()));
+        }
+
+        filteredTasks = tasks;
+        applySort();
+        calculateKPI(filteredTasks);
+    }
+
+    // ── Sorting ───────────────────────────────────────────────────────────
+    function sortTable(field) {
+        if (currentSort.field === field) {
+            currentSort.direction = currentSort.direction === 'asc' ? 'desc' : 'asc';
+        } else {
+            currentSort.field = field;
+            currentSort.direction = 'asc';
+        }
+        applySort();
+    }
+
+    function applySort() {
+        const field = currentSort.field;
+        filteredTasks.sort((a, b) => {
+            let aVal = a[field];
+            let bVal = b[field];
+            if (typeof aVal === 'string') { aVal = aVal.toLowerCase(); bVal = bVal.toLowerCase(); }
+            if (currentSort.direction === 'asc') return aVal > bVal ? 1 : -1;
+            else return aVal < bVal ? 1 : -1;
+        });
+        renderTable(filteredTasks);
+    }
+
+    // ── Render Table ──────────────────────────────────────────────────────
+    function renderTable(tasks) {
+        const tbody = document.getElementById('tableBody');
+
+        if (!tasks || tasks.length === 0) {
+            tbody.innerHTML = `<tr><td colspan="11" class="empty-state"><div style="font-size:2rem;margin-bottom:0.5rem;">📭</div><p>No tasks found for the selected filters.</p></td></tr>`;
+            return;
+        }
+
+        tbody.innerHTML = tasks.map(task => {
+            try {
+                let displayWorkTimeDays = parseFloat(task.workTimeDays) || 0;
+
+                if (String(task.status).toLowerCase() === 'active' && task.activateTimeDate) {
+                    const now = new Date();
+                    const activateTime = new Date(task.activateTimeDate);
+                    if (!isNaN(activateTime.getTime())) {
+                        const elapsedDays = (now - activateTime) / (1000 * 60 * 60 * 24);
+                        const storedWorkDays = (task.workTimeMinStored || 0) / (24 * 60);
+                        displayWorkTimeDays = storedWorkDays + elapsedDays;
+                    }
+                }
+
+                const daysTaken = parseFloat(task.daysTaken) || 0;
+                const workPercent = daysTaken > 0 ? Math.min((displayWorkTimeDays / daysTaken) * 100, 100) : 0;
+                const waitPercent = Math.max(0, 100 - workPercent);
+                const statusClass = String(task.status).toLowerCase();
+                const commentText = String(task.comments || '').trim();
+                const commentEscaped = commentText.replace(/\\/g, '\\\\').replace(/`/g, '\\`');
+                const createdDateStr = task.createdDate ? String(task.createdDate).substring(0, 10) : 'N/A';
+                const lastUpdatedStr = task.lastUpdated ? String(task.lastUpdated).substring(0, 10) : 'N/A';
+
+                return `
+                    <tr onclick="showCommentPanel(event, \`${commentEscaped}\`, '${String(task.taskId)}')" style="cursor:pointer;">
+                        <td class="task-number ${String(task.taskType).toLowerCase()}">${String(task.taskId)}</td>
+                        <td class="task-number">${String(task.projectId || '-')}</td>
+                        <td class="task-title" title="${String(task.subject)}">${String(task.subject).substring(0, 35)}${task.subject.length > 35 ? '...' : ''}</td>
+                        <td class="sender-cell" title="${String(task.sender)}">${String(task.sender).split(' ').slice(0, 2).join(' ')}</td>
+                        <td><span class="site-badge">${String(task.site)}</span></td>
+                        <td>${createdDateStr}</td>
+                        <td>${lastUpdatedStr}</td>
+                        <td><span class="status ${statusClass}">${String(task.status)}</span></td>
+                        <td class="numeric">${daysTaken.toFixed(1)} d</td>
+                        <td class="numeric">${displayWorkTimeDays.toFixed(1)} d</td>
+                        <td>
+                            <div class="time-bar-container" title="Work: ${displayWorkTimeDays.toFixed(1)}d | Total: ${daysTaken.toFixed(1)}d">
+                                <div class="time-bar">
+                                    <div class="time-work" style="width:${workPercent||0}%"></div>
+                                    <div class="time-wait" style="width:${waitPercent||0}%; left:auto;"></div>
+                                </div>
+                                <div class="time-label">${Math.round(workPercent)}%</div>
+                            </div>
+                        </td>
+                    </tr>
+                `;
+            } catch (err) {
+                console.warn('Error rendering row:', task, err);
+                return '';
+            }
+        }).join('');
+    }
+
+    // ── KPI Calculations ──────────────────────────────────────────────────
+    function calculateKPI(tasks) {
+        const taskTypeFilter = getTaskTypeFilter();
+        const typeFiltered = taskTypeFilter === 'All'
+            ? allTasks
+            : allTasks.filter(t => String(t.taskType).toLowerCase() === taskTypeFilter.toLowerCase());
+
+        document.getElementById('scAll').textContent    = typeFiltered.length;
+        document.getElementById('scActive').textContent = typeFiltered.filter(t => String(t.status).toLowerCase() === 'active').length;
+        document.getElementById('scPaused').textContent = typeFiltered.filter(t => String(t.status).toLowerCase() === 'paused').length;
+        document.getElementById('scClosed').textContent = typeFiltered.filter(t => String(t.status).toLowerCase() === 'closed').length;
+
+        if (!typeFiltered || typeFiltered.length === 0) {
+            document.getElementById('kpiClosedWorkTime').textContent = '-';
+            document.getElementById('kpiAllWorkTime').textContent = '-';
+            document.getElementById('kpiAllTotalTime').textContent = '-';
+            return;
+        }
+
+        const closedTasks = typeFiltered.filter(t => String(t.status).toLowerCase() === 'closed');
+        let avgClosedWorkTime = '-';
+        if (closedTasks.length > 0) {
+            const totalClosed = closedTasks.reduce((sum, t) => sum + (t.workTimeMinStored || 0) / (24 * 60), 0);
+            avgClosedWorkTime = (totalClosed / closedTasks.length).toFixed(2);
+        }
+
+        const totalAllWork = typeFiltered.reduce((sum, t) => {
+            if (String(t.status).toLowerCase() === 'active' && t.activateTimeDate) {
+                const now = new Date();
+                const activateTime = new Date(t.activateTimeDate);
+                if (!isNaN(activateTime.getTime())) {
+                    const elapsedDays = (now - activateTime) / (1000 * 60 * 60 * 24);
+                    return sum + (t.workTimeMinStored || 0) / (24 * 60) + elapsedDays;
+                }
+            }
+            return sum + (t.workTimeMinStored || 0) / (24 * 60);
+        }, 0);
+        const avgAllWorkTime = (totalAllWork / typeFiltered.length).toFixed(2);
+
+        const totalDaysTaken = typeFiltered.reduce((sum, t) => sum + parseFloat(t.daysTaken), 0);
+        const avgAllTotalTime = (totalDaysTaken / typeFiltered.length).toFixed(2);
+
+        document.getElementById('kpiClosedWorkTime').textContent = avgClosedWorkTime;
+        document.getElementById('kpiAllWorkTime').textContent = avgAllWorkTime;
+        document.getElementById('kpiAllTotalTime').textContent = avgAllTotalTime;
+    }
+
+    // ── Comment Panel ─────────────────────────────────────────────────────
+    function showCommentPanel(event, text, taskId) {
+        event.stopPropagation();
+        cancelHidePanel();
+        closeCommentPanel();
+        if (!text || text.trim() === '') return;
+
+        const sourceRow = event.currentTarget;
+        const panel = document.createElement('div');
+        panel.className = 'comment-panel';
+
+        const header = document.createElement('div');
+        header.className = 'comment-panel-header';
+        header.textContent = '📋 Comments — ' + taskId;
+        panel.appendChild(header);
+
+        text.split('\n').forEach((line, i) => {
+            if (i > 0) panel.appendChild(document.createElement('br'));
+            panel.appendChild(document.createTextNode(line));
+        });
+
+        panel.style.left = (event.clientX + 14) + 'px';
+        panel.style.top  = (event.clientY + 14) + 'px';
+        document.body.appendChild(panel);
+        activeCommentPanel = panel;
+
+        const rect = panel.getBoundingClientRect();
+        if (rect.right > window.innerWidth - 10) panel.style.left = (event.clientX - rect.width - 10) + 'px';
+        if (rect.bottom > window.innerHeight - 10) panel.style.top = (event.clientY - rect.height - 10) + 'px';
+
+        startPanelWatcher(sourceRow);
+    }
+
+    function startPanelWatcher(sourceRow) {
+        stopPanelWatcher();
+        panelWatcherFn = function(e) {
+            if (!activeCommentPanel) { stopPanelWatcher(); return; }
+            const overPanel = activeCommentPanel.contains(e.target) || e.target === activeCommentPanel;
+            const overRow   = sourceRow.contains(e.target) || e.target === sourceRow;
+            if (overPanel || overRow) cancelHidePanel();
+            else if (!panelHideTimer) scheduleHidePanel();
+        };
+        document.addEventListener('mousemove', panelWatcherFn);
+    }
+
+    function stopPanelWatcher() {
+        if (panelWatcherFn) { document.removeEventListener('mousemove', panelWatcherFn); panelWatcherFn = null; }
+    }
+
+    function scheduleHidePanel() {
+        clearTimeout(panelHideTimer);
+        panelHideTimer = setTimeout(() => { closeCommentPanel(); stopPanelWatcher(); }, 1000);
+    }
+
+    function cancelHidePanel() { clearTimeout(panelHideTimer); panelHideTimer = null; }
+
+    function closeCommentPanel() {
+        if (activeCommentPanel) { activeCommentPanel.remove(); activeCommentPanel = null; }
+        stopPanelWatcher();
+    }
+
+    document.addEventListener('click', function(e) {
+        if (!activeCommentPanel) return;
+        if (!activeCommentPanel.contains(e.target) && !e.target.closest('tr')) { cancelHidePanel(); closeCommentPanel(); }
+    });
+
+    // ── Statistics Modal ──────────────────────────────────────────────────
+    function showStatistics() {
+        if (!filteredTasks || filteredTasks.length === 0) { alert('No data to display'); return; }
+        const closedTasks = filteredTasks.filter(t => String(t.status).toLowerCase() === 'closed');
+        if (closedTasks.length === 0) { alert('No closed tasks to analyze'); return; }
+
+        const workTimes = closedTasks.map(t => parseFloat(((t.workTimeMinStored || 0) / (24 * 60)).toFixed(2))).sort((a, b) => a - b);
+        const avg = workTimes.reduce((a, b) => a + b, 0) / workTimes.length;
+        const median = workTimes.length % 2 ? workTimes[Math.floor(workTimes.length / 2)] : (workTimes[workTimes.length / 2 - 1] + workTimes[workTimes.length / 2]) / 2;
+        const variance = workTimes.reduce((sum, val) => sum + Math.pow(val - avg, 2), 0) / workTimes.length;
+        const stdDev = Math.sqrt(variance);
+        const totalTimes = closedTasks.map(t => parseFloat(t.daysTaken)).sort((a, b) => a - b);
+        const totalAvg = totalTimes.reduce((a, b) => a + b, 0) / totalTimes.length;
+
+        document.getElementById('statsAvg').textContent    = avg.toFixed(2) + ' d';
+        document.getElementById('statsTotal').textContent  = totalAvg.toFixed(2) + ' d';
+        document.getElementById('statsStdDev').textContent = stdDev.toFixed(2) + ' d';
+        document.getElementById('statsMedian').textContent = median.toFixed(2) + ' d';
+        document.getElementById('statsMin').textContent    = Math.min(...workTimes).toFixed(2) + ' d';
+        document.getElementById('statsMax').textContent    = Math.max(...workTimes).toFixed(2) + ' d';
+
+        drawHistogram(workTimes);
+        document.getElementById('statsModal').classList.add('show');
+    }
+
+    function closeStatistics() { document.getElementById('statsModal').classList.remove('show'); }
+
+    function drawHistogram(data) {
+        const ctx = document.getElementById('statsChart').getContext('2d');
+        if (statsChart) statsChart.destroy();
+        const bins = 10;
+        const min = Math.min(...data);
+        const max = Math.max(...data);
+        const binSize = (max - min) / bins || 1;
+        const histogram = Array(bins).fill(0);
+        data.forEach(val => { const i = Math.floor((val - min) / binSize); histogram[Math.min(i, bins - 1)]++; });
+        statsChart = new Chart(ctx, {
+            type: 'bar',
+            data: {
+                labels: Array.from({length: bins}, (_, i) => (min + i * binSize).toFixed(2)),
+                datasets: [{ label: 'Work Time Distribution', data: histogram, backgroundColor: 'rgba(74,138,74,0.7)', borderColor: 'rgba(45,107,45,1)', borderWidth: 1 }]
+            },
+            options: { responsive: true, plugins: { legend: { display: false } }, scales: { y: { beginAtZero: true } } }
+        });
+    }
+
+    // ── KPI Chart Modal ───────────────────────────────────────────────────
+    function showKpiChart(type) {
+        if (!filteredTasks || filteredTasks.length === 0) { alert('No data loaded yet.'); return; }
+
+        let tasks = [], valueGetter, title, subtitle, yLabel, barColor;
+
+        if (type === 'closedWork') {
+            tasks = filteredTasks.filter(t => String(t.status).toLowerCase() === 'closed');
+            valueGetter = t => parseFloat(((t.workTimeMinStored || 0) / (24 * 60)).toFixed(2));
+            title = 'Average Work Time — Closed Tasks';
+            subtitle = 'Work time (days) per closed task';
+            yLabel = 'Work Time (days)';
+            barColor = 'rgba(13,71,161,0.75)';
+        } else if (type === 'allWork') {
+            tasks = filteredTasks.slice();
+            valueGetter = t => {
+                if (String(t.status).toLowerCase() === 'active' && t.activateTimeDate) {
+                    const now = new Date();
+                    const at = new Date(t.activateTimeDate);
+                    if (!isNaN(at.getTime())) return parseFloat(((t.workTimeMinStored || 0) / (24 * 60) + (now - at) / (1000 * 60 * 60 * 24)).toFixed(2));
+                }
+                return parseFloat(((t.workTimeMinStored || 0) / (24 * 60)).toFixed(2));
+            };
+            title = 'Average Work Time — All Tasks';
+            subtitle = 'Work time (days) per task';
+            yLabel = 'Work Time (days)';
+            barColor = 'rgba(74,138,74,0.75)';
+        } else if (type === 'allTotal') {
+            tasks = filteredTasks.slice();
+            valueGetter = t => parseFloat(t.daysTaken);
+            title = 'Average Total Time — All Tasks';
+            subtitle = 'Total elapsed time (days) from creation';
+            yLabel = 'Total Time (days)';
+            barColor = 'rgba(217,119,6,0.75)';
+        }
+
+        if (tasks.length === 0) { alert('No tasks available for this KPI.'); return; }
+
+        const labels = tasks.map(t => t.taskId);
+        const values = tasks.map(valueGetter);
+        const n = values.length;
+        const avg = values.reduce((a, b) => a + b, 0) / n;
+        const min = Math.min(...values);
+        const max = Math.max(...values);
+        const range = max - min;
+        const variance = values.reduce((sum, v) => sum + Math.pow(v - avg, 2), 0) / n;
+        const stdDev = Math.sqrt(variance);
+
+        document.getElementById('kpiChartTitle').textContent = title;
+        document.getElementById('kpiChartSubtitle').textContent = subtitle + '  |  Tasks: ' + n;
+
+        document.getElementById('kpiStatsStrip').innerHTML = [
+            { label: 'Average', value: avg.toFixed(2) + ' d' },
+            { label: 'Minimum', value: min.toFixed(2) + ' d' },
+            { label: 'Maximum', value: max.toFixed(2) + ' d' },
+            { label: 'Range',   value: range.toFixed(2) + ' d' },
+            { label: 'Std Dev', value: stdDev.toFixed(2) + ' d' },
+        ].map(s => `<div class="kpi-stat-box"><div class="kpi-stat-label">${s.label}</div><div class="kpi-stat-value">${s.value}</div></div>`).join('');
+
+        const ctx = document.getElementById('kpiChart').getContext('2d');
+        if (kpiChart) kpiChart.destroy();
+        kpiChart = new Chart(ctx, {
+            type: 'bar',
+            data: {
+                labels: labels,
+                datasets: [
+                    { label: yLabel, data: values, backgroundColor: barColor, borderColor: barColor.replace('0.75', '1'), borderWidth: 1, order: 2 },
+                    { label: 'Average (' + avg.toFixed(2) + ' d)', data: Array(n).fill(parseFloat(avg.toFixed(2))), type: 'line', borderColor: '#c0392b', borderWidth: 2, borderDash: [6,4], pointRadius: 0, fill: false, order: 1 }
+                ]
+            },
+            options: {
+                responsive: true, maintainAspectRatio: false,
+                animation: { duration: 500, easing: 'easeOutQuart' },
+                plugins: {
+                    legend: { display: true, position: 'top' },
+                    tooltip: { callbacks: { label: ctx => ctx.dataset.type === 'line' ? 'Average: ' + avg.toFixed(2) + ' days' : ctx.dataset.label + ': ' + ctx.parsed.y.toFixed(2) + ' days' } }
+                },
+                scales: {
+                    x: { title: { display: true, text: 'Task ID' }, ticks: { maxRotation: 45, minRotation: 0 } },
+                    y: { beginAtZero: true, title: { display: true, text: yLabel } }
+                }
+            }
+        });
+        document.getElementById('kpiChartModal').classList.add('show');
+    }
+
+    function closeKpiChart() { document.getElementById('kpiChartModal').classList.remove('show'); }
+
+    // ── Clock ─────────────────────────────────────────────────────────────
+    function updateClock() {
+        const now = new Date();
+        const pad = n => String(n).padStart(2, '0');
+        document.getElementById('headerClock').textContent = `${now.getFullYear()}-${pad(now.getMonth()+1)}-${pad(now.getDate())} ${pad(now.getHours())}:${pad(now.getMinutes())}`;
+    }
+    updateClock();
+    setInterval(updateClock, 30000);
+
+    // ── Modal close on backdrop click ─────────────────────────────────────
+    window.onclick = function(event) {
+        if (event.target === document.getElementById('statsModal')) closeStatistics();
+        if (event.target === document.getElementById('kpiChartModal')) closeKpiChart();
+    };
+
+    // ── Auto load on page open ────────────────────────────────────────────
+    document.addEventListener('DOMContentLoaded', loadFromFirebase);
+</script>
+</body>
+</html>
