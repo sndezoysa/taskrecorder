@@ -141,11 +141,6 @@
 
         .last-updated { font-size: 0.75rem; opacity: 0.75; white-space: nowrap; }
 
-        .priority-badge { display: inline-block; padding: 0.2rem 0.5rem; border-radius: 3px; font-size: 0.8rem; font-weight: 700; min-width: 28px; text-align: center; }
-        .priority-high   { background-color: #fde8e8; color: #c0392b; border: 1px solid #f1948a; }
-        .priority-medium { background-color: #fef9e7; color: #d97706; border: 1px solid #f9e79f; }
-        .priority-low    { background-color: #e8f5e8; color: #2d7a2d; border: 1px solid #7ec57e; }
-
         @media (max-width: 1024px) {
             .header-content { flex-direction: column; align-items: flex-start; }
             .controls-wrapper { flex-direction: column; }
@@ -257,7 +252,6 @@
                 <thead>
                     <tr>
                         <th onclick="sortTable('taskId')" style="width:55px;">Task No <span class="sort-icon">↕️</span></th>
-                        <th onclick="sortTable('priorityScore')" style="width:65px;">Priority <span class="sort-icon">↕️</span></th>
                         <th onclick="sortTable('projectId')" style="width:100px;">Project ID <span class="sort-icon">↕️</span></th>
                         <th onclick="sortTable('subject')">Title <span class="sort-icon">↕️</span></th>
                         <th onclick="sortTable('sender')">Requester <span class="sort-icon">↕️</span></th>
@@ -272,7 +266,7 @@
                 </thead>
                 <tbody id="tableBody">
                     <tr>
-                        <td colspan="12" class="empty-state">
+                        <td colspan="11" class="empty-state">
                             <div class="spinner"></div>
                             <p>Loading tasks from Firebase...</p>
                         </td>
@@ -533,13 +527,12 @@
         renderTable(filteredTasks);
     }
 
-    // ── Priority Badge ────────────────────────────────────────────────────
-    function renderPriority(score) {
+    // ── Priority Border ───────────────────────────────────────────────────
+    function getPriorityBorder(score) {
         const s = parseInt(score) || 5;
-        let cls = 'priority-medium';
-        if (s >= 8) cls = 'priority-high';
-        else if (s <= 4) cls = 'priority-low';
-        return `<span class="priority-badge ${cls}">${s}</span>`;
+        if (s >= 8) return '3px solid #c0392b';
+        if (s <= 4) return '3px solid #2d7a2d';
+        return '3px solid #d97706';
     }
 
     // ── Render Table ──────────────────────────────────────────────────────
@@ -547,7 +540,7 @@
         const tbody = document.getElementById('tableBody');
 
         if (!tasks || tasks.length === 0) {
-            tbody.innerHTML = `<tr><td colspan="12" class="empty-state"><div style="font-size:2rem;margin-bottom:0.5rem;">📭</div><p>No tasks found for the selected filters.</p></td></tr>`;
+            tbody.innerHTML = `<tr><td colspan="11" class="empty-state"><div style="font-size:2rem;margin-bottom:0.5rem;">📭</div><p>No tasks found for the selected filters.</p></td></tr>`;
             return;
         }
 
@@ -576,8 +569,7 @@
 
                 return `
                     <tr onclick="showCommentPanel(event, \`${commentEscaped}\`, '${String(task.taskId)}')" style="cursor:pointer;">
-                        <td class="task-number ${String(task.taskType).toLowerCase()}">${String(task.taskId)}</td>
-                        <td class="numeric">${renderPriority(task.priorityScore)}</td>
+                        <td class="task-number ${String(task.taskType).toLowerCase()}" style="border-left:${getPriorityBorder(task.priorityScore)}; padding-left:0.6rem;">${String(task.taskId)}</td>
                         <td class="task-number">${String(task.projectId || '-')}</td>
                         <td class="task-title" title="${String(task.subject)}">${String(task.subject).substring(0, 35)}${task.subject.length > 35 ? '...' : ''}</td>
                         <td class="sender-cell" title="${String(task.sender)}">${String(task.sender).split(' ').slice(0, 2).join(' ')}</td>
