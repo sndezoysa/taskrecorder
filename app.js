@@ -258,6 +258,35 @@ async function taskSelectedClose() {
     }
 }
 
+// ── Helper: Validate Action DateTime ─────────────────────────────────
+function validateDateTime(dateTimeStr, referenceStr, tab, checkFuture = true) {
+    // Check format
+    const pattern = /^\d{4}-\d{2}-\d{2} \d{2}:\d{2}$/;
+    if (!pattern.test(dateTimeStr)) {
+        showStatus(tab, 'Invalid date format. Use yyyy-mm-dd hh:mm', 'error');
+        return false;
+    }
+
+    const actionTime = new Date(dateTimeStr.replace(' ', 'T'));
+
+    // Check if future time
+    if (checkFuture && actionTime > new Date()) {
+        showStatus(tab, 'Time cannot be in the future.', 'error');
+        return false;
+    }
+
+    // Check against reference time if provided
+    if (referenceStr) {
+        const referenceTime = new Date(referenceStr.replace(' ', 'T'));
+        if (actionTime <= referenceTime) {
+            showStatus(tab, 'Time must be after ' + referenceStr, 'error');
+            return false;
+        }
+    }
+
+    return true;
+}
+
 // ── Pause Task ────────────────────────────────────────────────────────
 async function pauseTask() {
     const taskId = document.getElementById('cmbActiveTaskPause').value;
@@ -268,6 +297,9 @@ async function pauseTask() {
         showStatus('pause', 'Please select a task and set pause time.', 'error');
         return;
     }
+
+    const activeSince = document.getElementById('txtActiveSincePause').value;
+    if (!validateDateTime(pauseTime, activeSince, 'pause')) return;
 
     try {
         const docRef = db.collection('tasks').doc(taskId);
@@ -309,6 +341,9 @@ async function resumeTask() {
         showStatus('resume', 'Please select a task and set resume time.', 'error');
         return;
     }
+
+    const pausedSince = document.getElementById('txtPausedSinceResume').value;
+    if (!validateDateTime(resumeTime, pausedSince, 'resume')) return;
 
     try {
         const docRef = db.collection('tasks').doc(taskId);
@@ -366,9 +401,12 @@ async function closeTask() {
         return;
     }
 
-    // Second click — proceed with closing
+    // Second click — validate then proceed
     clearTimeout(closeConfirmTimer);
     resetCloseButton();
+
+    const activeSinceClose = document.getElementById('txtActiveSinceClose').value;
+    if (!validateDateTime(closeTime, activeSinceClose, 'close')) return;
 
     try {
         const docRef = db.collection('tasks').doc(taskId);
