@@ -35,18 +35,26 @@ function extractEmail() {
         return;
     }
 
+    const senderName = item.from.displayName || '';
+    const senderEmail = (item.from.emailAddress || '').toLowerCase();
+    const receiverName = item.to.map(r => r.displayName).join(', ') || '';
+
     document.getElementById('txtSubject').value = item.subject || '';
-    document.getElementById('txtSender').value = item.from.displayName || '';
-    document.getElementById('txtReceiver').value = item.to.map(r => r.displayName).join(', ') || '';
+    document.getElementById('txtSender').value = senderName;
+    document.getElementById('txtReceiver').value = receiverName;
 
     const received = new Date(item.dateTimeCreated);
     document.getElementById('txtDateTime').value = formatDateTime(received);
 
-    // Auto-select QMS Task if sender is the QMS platform
-    const senderEmail = (item.from.emailAddress || '').toLowerCase();
+    // ── Auto-select Task Type ─────────────────────────────────────────
     if (senderEmail === 'noreplykc@makeenenergy.com') {
+        // QMS platform email
         document.querySelector('input[name="taskType"][value="QMS Task"]').checked = true;
+    } else if (senderName && senderName === receiverName) {
+        // Sender and receiver are the same person — self-created task
+        document.querySelector('input[name="taskType"][value="Created"]').checked = true;
     } else {
+        // Default — requested by someone else
         document.querySelector('input[name="taskType"][value="Requested"]').checked = true;
     }
 
