@@ -120,11 +120,10 @@
                 <textarea id="txtCommentsPause" rows="3"></textarea>
             </div>
             <div class="button-row">
-                <button class="btn-secondary" onclick="loadActiveTasks('pause')">Load Tasks</button>
                 <button class="btn-secondary" onclick="setCurrentTime('pause')">Now</button>
                 <button class="btn-secondary" onclick="extractDateTime('pause')">Extract</button>
                 <button class="btn-secondary" onclick="clearPause()">Clear</button>
-                <button class="btn-primary" onclick="pauseTask()">Pause</button>
+                <button class="btn-primary" id="btnPause" disabled onclick="pauseTask()">Pause</button>
             </div>
             <div id="status-pause" class="status-msg"></div>
         </div>
@@ -150,11 +149,10 @@
                 <textarea id="txtCommentsResume" rows="3"></textarea>
             </div>
             <div class="button-row">
-                <button class="btn-secondary" onclick="loadPausedTasks()">Load Tasks</button>
                 <button class="btn-secondary" onclick="setCurrentTime('resume')">Now</button>
                 <button class="btn-secondary" onclick="extractDateTime('resume')">Extract</button>
                 <button class="btn-secondary" onclick="clearResume()">Clear</button>
-                <button class="btn-primary" onclick="resumeTask()">Resume</button>
+                <button class="btn-primary" id="btnResume" disabled onclick="resumeTask()">Resume</button>
             </div>
             <div id="status-resume" class="status-msg"></div>
         </div>
@@ -180,11 +178,10 @@
                 <textarea id="txtCommentsClose" rows="3"></textarea>
             </div>
             <div class="button-row">
-                <button class="btn-secondary" onclick="loadActiveTasks('close')">Load Tasks</button>
                 <button class="btn-secondary" onclick="setCurrentTime('close')">Now</button>
                 <button class="btn-secondary" onclick="extractDateTime('close')">Extract</button>
                 <button class="btn-secondary" onclick="clearClose()">Clear</button>
-                <button class="btn-primary" id="btnClose" onclick="closeTask()">Close</button>
+                <button class="btn-primary" id="btnClose" disabled onclick="closeTask()">Close</button>
             </div>
             <div id="status-close" class="status-msg"></div>
         </div>

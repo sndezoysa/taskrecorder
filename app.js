@@ -143,13 +143,13 @@ async function createTask() {
 async function loadActiveTasks(tab) {
     const selectId = tab === 'pause' ? 'cmbActiveTaskPause' : 'cmbActiveTaskClose';
     const select = document.getElementById(selectId);
-    const loadBtn = tab === 'pause' ?
-        document.querySelector('#tab-pause .btn-secondary') :
-        document.querySelector('#tab-close .btn-secondary');
+
+    // Disable action button while loading
+    const actionBtnId = tab === 'pause' ? 'btnPause' : 'btnClose';
+    const actionBtn = document.getElementById(actionBtnId);
+    actionBtn.disabled = true;
 
     select.innerHTML = '<option value="">-- Loading... --</option>';
-    loadBtn.disabled = true;
-    loadBtn.textContent = 'Loading...';
 
     try {
         const snapshot = await db.collection('tasks')
@@ -161,8 +161,6 @@ async function loadActiveTasks(tab) {
 
         if (snapshot.empty) {
             showStatus(tab, 'No active tasks found.', 'error');
-            loadBtn.disabled = false;
-            loadBtn.textContent = 'Load Tasks';
             return;
         }
 
@@ -179,20 +177,16 @@ async function loadActiveTasks(tab) {
     } catch (error) {
         console.error('Error loading tasks:', error);
         showStatus(tab, 'Error: ' + error.message, 'error');
-    } finally {
-        loadBtn.disabled = false;
-        loadBtn.textContent = 'Load Tasks';
     }
 }
 
 // ── Load Paused Tasks ─────────────────────────────────────────────────
 async function loadPausedTasks() {
     const select = document.getElementById('cmbPausedTaskResume');
-    const loadBtn = document.querySelector('#tab-resume .btn-secondary');
+    const resumeBtn = document.getElementById('btnResume');
+    resumeBtn.disabled = true;
 
     select.innerHTML = '<option value="">-- Loading... --</option>';
-    loadBtn.disabled = true;
-    loadBtn.textContent = 'Loading...';
 
     try {
         const snapshot = await db.collection('tasks')
@@ -220,60 +214,75 @@ async function loadPausedTasks() {
     } catch (error) {
         console.error('Error loading tasks:', error);
         showStatus('resume', 'Error: ' + error.message, 'error');
-    } finally {
-        loadBtn.disabled = false;
-        loadBtn.textContent = 'Load Tasks';
     }
 }
 
 // ── Task Selected in Pause Dropdown ──────────────────────────────────
 async function taskSelectedPause() {
     const taskId = document.getElementById('cmbActiveTaskPause').value;
+    const pauseBtn = document.getElementById('btnPause');
+
     if (!taskId) {
         document.getElementById('txtActiveSincePause').value = '';
+        pauseBtn.disabled = true;
         return;
     }
+
     try {
         const doc = await db.collection('tasks').doc(taskId).get();
         if (doc.exists) {
             document.getElementById('txtActiveSincePause').value = doc.data().activateTime;
+            pauseBtn.disabled = false;
         }
     } catch (error) {
         console.error('Error fetching task:', error);
+        pauseBtn.disabled = true;
     }
 }
 
 // ── Task Selected in Resume Dropdown ─────────────────────────────────
 async function taskSelectedResume() {
     const taskId = document.getElementById('cmbPausedTaskResume').value;
+    const resumeBtn = document.getElementById('btnResume');
+
     if (!taskId) {
         document.getElementById('txtPausedSinceResume').value = '';
+        resumeBtn.disabled = true;
         return;
     }
+
     try {
         const doc = await db.collection('tasks').doc(taskId).get();
         if (doc.exists) {
             document.getElementById('txtPausedSinceResume').value = doc.data().inactivateTime;
+            resumeBtn.disabled = false;
         }
     } catch (error) {
         console.error('Error fetching task:', error);
+        resumeBtn.disabled = true;
     }
 }
 
 // ── Task Selected in Close Dropdown ──────────────────────────────────
 async function taskSelectedClose() {
     const taskId = document.getElementById('cmbActiveTaskClose').value;
+    const closeBtn = document.getElementById('btnClose');
+
     if (!taskId) {
         document.getElementById('txtActiveSinceClose').value = '';
+        closeBtn.disabled = true;
         return;
     }
+
     try {
         const doc = await db.collection('tasks').doc(taskId).get();
         if (doc.exists) {
             document.getElementById('txtActiveSinceClose').value = doc.data().activateTime;
+            closeBtn.disabled = false;
         }
     } catch (error) {
         console.error('Error fetching task:', error);
+        closeBtn.disabled = true;
     }
 }
 
@@ -319,7 +328,7 @@ async function pauseTask() {
         return;
     }
 
-    const pauseBtn = document.querySelector('#tab-pause .btn-primary');
+    const pauseBtn = document.getElementById('btnPause');
     pauseBtn.disabled = true;
     pauseBtn.textContent = 'Pausing...';
 
@@ -345,13 +354,14 @@ async function pauseTask() {
 
         showStatus('pause', 'Task ' + taskId + ' paused. Work time: ' + newWorkTime + ' mins ✅', 'success');
         document.getElementById('cmbActiveTaskPause').innerHTML = '<option value="">-- Select Task --</option>';
+        document.getElementById('txtActiveSincePause').value = '';
         clearPause();
 
     } catch (error) {
         console.error('Error pausing task:', error);
         showStatus('pause', 'Error: ' + error.message, 'error');
     } finally {
-        pauseBtn.disabled = false;
+        pauseBtn.disabled = true;
         pauseBtn.textContent = 'Pause';
     }
 }
@@ -373,7 +383,7 @@ async function resumeTask() {
         return;
     }
 
-    const resumeBtn = document.querySelector('#tab-resume .btn-primary');
+    const resumeBtn = document.getElementById('btnResume');
     resumeBtn.disabled = true;
     resumeBtn.textContent = 'Resuming...';
 
@@ -394,13 +404,14 @@ async function resumeTask() {
 
         showStatus('resume', 'Task ' + taskId + ' resumed. Clock restarted ✅', 'success');
         document.getElementById('cmbPausedTaskResume').innerHTML = '<option value="">-- Select Task --</option>';
+        document.getElementById('txtPausedSinceResume').value = '';
         clearResume();
 
     } catch (error) {
         console.error('Error resuming task:', error);
         showStatus('resume', 'Error: ' + error.message, 'error');
     } finally {
-        resumeBtn.disabled = false;
+        resumeBtn.disabled = true;
         resumeBtn.textContent = 'Resume';
     }
 }
@@ -473,13 +484,14 @@ async function closeTask() {
 
         showStatus('close', 'Task ' + taskId + ' closed. Total: ' + finalWorkTime + ' mins (' + finalWorkHours + ' hrs) ✅', 'success');
         document.getElementById('cmbActiveTaskClose').innerHTML = '<option value="">-- Select Task --</option>';
+        document.getElementById('txtActiveSinceClose').value = '';
         clearClose();
 
     } catch (error) {
         console.error('Error closing task:', error);
         showStatus('close', 'Error: ' + error.message, 'error');
     } finally {
-        closeBtn.disabled = false;
+        closeBtn.disabled = true;
         closeBtn.textContent = 'Close';
     }
 }
