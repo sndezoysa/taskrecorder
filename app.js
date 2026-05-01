@@ -98,7 +98,9 @@ async function createTask() {
         return;
     }
 
-    document.getElementById('btnCreate').disabled = true;
+    const createBtn = document.getElementById('btnCreate');
+    createBtn.disabled = true;
+    createBtn.textContent = 'Creating...';
     showStatus('create', 'Creating task...', 'success');
 
     try {
@@ -132,7 +134,8 @@ async function createTask() {
     } catch (error) {
         console.error('Error creating task:', error);
         showStatus('create', 'Error: ' + error.message, 'error');
-        document.getElementById('btnCreate').disabled = false;
+        createBtn.disabled = false;
+        createBtn.textContent = 'Create';
     }
 }
 
@@ -140,8 +143,13 @@ async function createTask() {
 async function loadActiveTasks(tab) {
     const selectId = tab === 'pause' ? 'cmbActiveTaskPause' : 'cmbActiveTaskClose';
     const select = document.getElementById(selectId);
+    const loadBtn = tab === 'pause' ?
+        document.querySelector('#tab-pause .btn-secondary') :
+        document.querySelector('#tab-close .btn-secondary');
 
     select.innerHTML = '<option value="">-- Loading... --</option>';
+    loadBtn.disabled = true;
+    loadBtn.textContent = 'Loading...';
 
     try {
         const snapshot = await db.collection('tasks')
@@ -153,6 +161,8 @@ async function loadActiveTasks(tab) {
 
         if (snapshot.empty) {
             showStatus(tab, 'No active tasks found.', 'error');
+            loadBtn.disabled = false;
+            loadBtn.textContent = 'Load Tasks';
             return;
         }
 
@@ -169,14 +179,20 @@ async function loadActiveTasks(tab) {
     } catch (error) {
         console.error('Error loading tasks:', error);
         showStatus(tab, 'Error: ' + error.message, 'error');
+    } finally {
+        loadBtn.disabled = false;
+        loadBtn.textContent = 'Load Tasks';
     }
 }
 
 // ── Load Paused Tasks ─────────────────────────────────────────────────
 async function loadPausedTasks() {
     const select = document.getElementById('cmbPausedTaskResume');
+    const loadBtn = document.querySelector('#tab-resume .btn-secondary');
 
     select.innerHTML = '<option value="">-- Loading... --</option>';
+    loadBtn.disabled = true;
+    loadBtn.textContent = 'Loading...';
 
     try {
         const snapshot = await db.collection('tasks')
@@ -204,6 +220,9 @@ async function loadPausedTasks() {
     } catch (error) {
         console.error('Error loading tasks:', error);
         showStatus('resume', 'Error: ' + error.message, 'error');
+    } finally {
+        loadBtn.disabled = false;
+        loadBtn.textContent = 'Load Tasks';
     }
 }
 
@@ -260,7 +279,6 @@ async function taskSelectedClose() {
 
 // ── Helper: Validate Action DateTime ─────────────────────────────────
 function validateDateTime(dateTimeStr, referenceStr, tab, checkFuture = true) {
-    // Check format
     const pattern = /^\d{4}-\d{2}-\d{2} \d{2}:\d{2}$/;
     if (!pattern.test(dateTimeStr)) {
         showStatus(tab, '❌ Invalid date format. Use yyyy-mm-dd hh:mm', 'error');
@@ -269,13 +287,11 @@ function validateDateTime(dateTimeStr, referenceStr, tab, checkFuture = true) {
 
     const actionTime = new Date(dateTimeStr.replace(' ', 'T'));
 
-    // Check if future time
     if (checkFuture && actionTime > new Date()) {
         showStatus(tab, '❌ Time cannot be in the future.', 'error');
         return false;
     }
 
-    // Check against reference time if provided
     if (referenceStr) {
         const referenceTime = new Date(referenceStr.replace(' ', 'T'));
         if (actionTime <= referenceTime) {
@@ -302,6 +318,10 @@ async function pauseTask() {
         showStatus('pause', '❌ Pause time must be after active since: ' + activeSince, 'error');
         return;
     }
+
+    const pauseBtn = document.querySelector('#tab-pause .btn-primary');
+    pauseBtn.disabled = true;
+    pauseBtn.textContent = 'Pausing...';
 
     try {
         const docRef = db.collection('tasks').doc(taskId);
@@ -330,6 +350,9 @@ async function pauseTask() {
     } catch (error) {
         console.error('Error pausing task:', error);
         showStatus('pause', 'Error: ' + error.message, 'error');
+    } finally {
+        pauseBtn.disabled = false;
+        pauseBtn.textContent = 'Pause';
     }
 }
 
@@ -349,6 +372,10 @@ async function resumeTask() {
         showStatus('resume', '❌ Resume time must be after paused since: ' + pausedSince, 'error');
         return;
     }
+
+    const resumeBtn = document.querySelector('#tab-resume .btn-primary');
+    resumeBtn.disabled = true;
+    resumeBtn.textContent = 'Resuming...';
 
     try {
         const docRef = db.collection('tasks').doc(taskId);
@@ -372,6 +399,9 @@ async function resumeTask() {
     } catch (error) {
         console.error('Error resuming task:', error);
         showStatus('resume', 'Error: ' + error.message, 'error');
+    } finally {
+        resumeBtn.disabled = false;
+        resumeBtn.textContent = 'Resume';
     }
 }
 
@@ -416,6 +446,10 @@ async function closeTask() {
         return;
     }
 
+    const closeBtn = document.getElementById('btnClose');
+    closeBtn.disabled = true;
+    closeBtn.textContent = 'Closing...';
+
     try {
         const docRef = db.collection('tasks').doc(taskId);
         const doc = await docRef.get();
@@ -444,6 +478,9 @@ async function closeTask() {
     } catch (error) {
         console.error('Error closing task:', error);
         showStatus('close', 'Error: ' + error.message, 'error');
+    } finally {
+        closeBtn.disabled = false;
+        closeBtn.textContent = 'Close';
     }
 }
 
