@@ -351,6 +351,10 @@ async function closeTask() {
         return;
     }
 
+    // Confirm before closing
+    const confirmed = confirm('Are you sure you want to close task ' + taskId + '? This cannot be undone.');
+    if (!confirmed) return;
+
     try {
         const docRef = db.collection('tasks').doc(taskId);
         const doc = await docRef.get();
