@@ -37,7 +37,8 @@
         .header h1 { font-size: 1.5rem; font-weight: 600; letter-spacing: -0.5px; }
 
         .kpi-box { background: rgba(255,255,255,0.12); padding: 0.7rem 1.5rem; border-radius: 6px; backdrop-filter: blur(10px); border: 1px solid rgba(255,255,255,0.15); cursor: pointer; transition: all 0.3s; min-width: 160px; }
-        .kpi-box:first-child { border: 2px solid var(--accent-pale); background: rgba(212,228,212,0.15); }
+        .kpi-box:first-child { border: 2px solid #c0392b; background: rgba(192,57,43,0.08); }
+        .kpi-box.kpi-highlight { border: 2px solid #c0392b !important; background: rgba(192,57,43,0.12) !important; }
         .kpi-box:hover { background: rgba(255,255,255,0.18); transform: translateY(-2px); }
         .kpi-label { font-size: 0.75rem; opacity: 0.85; margin-bottom: 0.15rem; }
         .kpi-main { font-size: 1.3rem; font-weight: 700; color: #fff; }
@@ -146,6 +147,88 @@
             .controls-wrapper { flex-direction: column; }
             th, td { padding: 0.6rem; font-size: 0.8rem; }
         }
+
+        /* ── Print Styles ── */
+        .print-header { display: none; }
+        .print-footer { display: none; }
+
+        @media print {
+            /* Hide screen-only elements */
+            .header { display: none !important; }
+            .controls { display: none !important; }
+            .modal { display: none !important; }
+            .comment-panel { display: none !important; }
+            .sort-icon { display: none !important; }
+
+            /* Show print-only elements */
+            .print-header { display: block !important; text-align: center; margin-bottom: 1.5rem; padding-bottom: 1rem; border-bottom: 2px solid var(--primary-medium); }
+            .print-header h1 { font-size: 1.4rem; font-weight: 700; color: var(--primary-dark); margin-bottom: 0.3rem; }
+            .print-header .print-date { font-size: 0.85rem; color: #666; }
+            .print-footer { display: block !important; position: fixed; bottom: 0; left: 0; right: 0; padding: 0.6rem 1rem; border-top: 2px solid var(--primary-medium); text-align: center; font-size: 0.8rem; color: #666; background: white; }
+
+            /* Print KPI section */
+            .print-kpi { display: flex !important; justify-content: center; gap: 1.5rem; margin-bottom: 1.5rem; flex-wrap: wrap; }
+            .print-kpi-box { border: 1px solid #ccc; border-radius: 6px; padding: 0.6rem 1.2rem; text-align: center; min-width: 120px; }
+            .print-kpi-label { font-size: 0.72rem; color: #666; text-transform: uppercase; letter-spacing: 0.04em; }
+            .print-kpi-count { font-size: 1.4rem; font-weight: 700; }
+            .print-kpi-count.all    { color: #1a1a1a; }
+            .print-kpi-count.active { color: #2d7a2d; }
+            .print-kpi-count.paused { color: #d97706; }
+            .print-kpi-count.closed { color: #0d47a1; }
+            .print-kpi-box.kpi-avg { border-color: var(--primary-medium); }
+            .print-kpi-box.kpi-highlight { border: 2px solid #c0392b !important; print-color-adjust: exact; -webkit-print-color-adjust: exact; }
+            .print-kpi-avg-label { font-size: 0.72rem; color: #666; }
+            .print-kpi-avg-value { font-size: 1.2rem; font-weight: 700; color: var(--primary-dark); }
+            .print-kpi-avg-sub { font-size: 0.65rem; color: #999; }
+
+            /* Page setup */
+            @page { margin: 1.5cm; size: A4 landscape; }
+            body { background: white !important; font-size: 0.85rem; }
+
+            .container { padding: 0; margin: 0; max-width: 100%; }
+            .table-section { box-shadow: none; border: 1px solid #999; }
+            .table-wrapper { overflow: visible; }
+
+            table { border-collapse: collapse; width: 100%; font-size: 0.82rem; }
+
+            /* Green header like old dashboard */
+            thead { background-color: var(--primary-medium) !important; print-color-adjust: exact; -webkit-print-color-adjust: exact; display: table-header-group; }
+            th { background-color: var(--primary-medium) !important; color: white !important; border: 1px solid var(--primary-dark); padding: 0.6rem 0.8rem; font-weight: 600; print-color-adjust: exact; -webkit-print-color-adjust: exact; cursor: default; }
+
+            td { padding: 0.55rem 0.8rem; border: 1px solid #ddd; background-color: white !important; color: #111 !important; }
+            tbody tr { page-break-inside: avoid; }
+            tbody tr:nth-child(even) td { background-color: #f9f9f9 !important; print-color-adjust: exact; -webkit-print-color-adjust: exact; }
+
+            /* Hide columns not needed in print — Received Date, Last Updated, Days Taken */
+            th:nth-child(6), td:nth-child(6),
+            th:nth-child(7), td:nth-child(7),
+            th:nth-child(9), td:nth-child(9) { display: none !important; }
+
+            /* Task number colors */
+            .task-number { font-weight: 600; color: #111 !important; }
+            .task-number.requested { color: #1a56a0 !important; print-color-adjust: exact; -webkit-print-color-adjust: exact; }
+            .task-number.created   { color: #7b1fa2 !important; print-color-adjust: exact; -webkit-print-color-adjust: exact; }
+
+            /* Status badges */
+            .status { color: #111 !important; font-weight: 700 !important; border: 1px solid #aaa !important; print-color-adjust: exact; -webkit-print-color-adjust: exact; }
+            .status.active  { background-color: #d4edda !important; }
+            .status.paused  { background-color: #fff3cd !important; }
+            .status.closed  { background-color: #cce5ff !important; }
+
+            /* Site badge */
+            .site-badge { background-color: #e0e0e0 !important; color: #111 !important; print-color-adjust: exact; -webkit-print-color-adjust: exact; }
+
+            /* Time bar */
+            .time-bar-container { min-width: 120px; }
+            .time-bar { background-color: #e8e8e8 !important; border: 1px solid #ccc !important; height: 16px !important; print-color-adjust: exact; -webkit-print-color-adjust: exact; }
+            .time-work { background-color: #4a8a4a !important; print-color-adjust: exact; -webkit-print-color-adjust: exact; }
+            .time-wait { background-color: #a8c8a8 !important; print-color-adjust: exact; -webkit-print-color-adjust: exact; }
+            .time-label { color: #111 !important; }
+
+            .numeric { color: #111 !important; }
+            .task-title { color: #111 !important; min-width: 180px; max-width: 240px; }
+            .sender-cell { color: #111 !important; max-width: 110px; }
+        }
     </style>
 </head>
 <body>
@@ -194,6 +277,48 @@
         </div>
     </div>
 </div>
+
+<!-- Print Only Header -->
+<div class="print-header">
+    <h1>ATEX/IECEx Project Manager - Daily Tasks</h1>
+    <div class="print-date" id="printDate"></div>
+    <div class="print-kpi" style="display:none;">
+        <div class="print-kpi-box">
+            <div class="print-kpi-label">All Tasks</div>
+            <div class="print-kpi-count all" id="printScAll">-</div>
+        </div>
+        <div class="print-kpi-box">
+            <div class="print-kpi-label">Active</div>
+            <div class="print-kpi-count active" id="printScActive">-</div>
+        </div>
+        <div class="print-kpi-box">
+            <div class="print-kpi-label">Paused</div>
+            <div class="print-kpi-count paused" id="printScPaused">-</div>
+        </div>
+        <div class="print-kpi-box">
+            <div class="print-kpi-label">Closed</div>
+            <div class="print-kpi-count closed" id="printScClosed">-</div>
+        </div>
+        <div class="print-kpi-box kpi-avg kpi-highlight">
+            <div class="print-kpi-avg-label">Avg Work (Closed)</div>
+            <div class="print-kpi-avg-value" id="printKpiClosed">-</div>
+            <div class="print-kpi-avg-sub">days</div>
+        </div>
+        <div class="print-kpi-box kpi-avg">
+            <div class="print-kpi-avg-label">Avg Work (All)</div>
+            <div class="print-kpi-avg-value" id="printKpiAll">-</div>
+            <div class="print-kpi-avg-sub">days</div>
+        </div>
+        <div class="print-kpi-box kpi-avg">
+            <div class="print-kpi-avg-label">Avg Total Time</div>
+            <div class="print-kpi-avg-value" id="printKpiTotal">-</div>
+            <div class="print-kpi-avg-sub">days</div>
+        </div>
+    </div>
+</div>
+
+<!-- Print Only Footer -->
+<div class="print-footer" id="printFooter"></div>
 
 <div class="container">
     <div class="controls">
@@ -642,6 +767,15 @@
         document.getElementById('kpiClosedWorkTime').textContent = avgClosedWorkTime;
         document.getElementById('kpiAllWorkTime').textContent = avgAllWorkTime;
         document.getElementById('kpiAllTotalTime').textContent = avgAllTotalTime;
+
+        // Sync print KPI values
+        document.getElementById('printScAll').textContent    = typeFiltered.length;
+        document.getElementById('printScActive').textContent = typeFiltered.filter(t => String(t.status).toLowerCase() === 'active').length;
+        document.getElementById('printScPaused').textContent = typeFiltered.filter(t => String(t.status).toLowerCase() === 'paused').length;
+        document.getElementById('printScClosed').textContent = typeFiltered.filter(t => String(t.status).toLowerCase() === 'closed').length;
+        document.getElementById('printKpiClosed').textContent = avgClosedWorkTime;
+        document.getElementById('printKpiAll').textContent    = avgAllWorkTime;
+        document.getElementById('printKpiTotal').textContent  = avgAllTotalTime;
     }
 
     // ── Comment Panel ─────────────────────────────────────────────────────
@@ -848,7 +982,10 @@
     function updateClock() {
         const now = new Date();
         const pad = n => String(n).padStart(2, '0');
-        document.getElementById('headerClock').textContent = `${now.getFullYear()}-${pad(now.getMonth()+1)}-${pad(now.getDate())} ${pad(now.getHours())}:${pad(now.getMinutes())}`;
+        const dateStr = `${now.getFullYear()}-${pad(now.getMonth()+1)}-${pad(now.getDate())} ${pad(now.getHours())}:${pad(now.getMinutes())}`;
+        document.getElementById('headerClock').textContent = dateStr;
+        document.getElementById('printDate').textContent = 'Generated on: ' + dateStr;
+        document.getElementById('printFooter').textContent = 'ATEX/IECEx Project Manager  |  Generated on: ' + dateStr;
     }
     updateClock();
     setInterval(updateClock, 30000);
