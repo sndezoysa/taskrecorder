@@ -90,8 +90,9 @@ async function generateTaskId() {
 
 // ── Create Task ───────────────────────────────────────────────────────
 async function createTask() {
-    const subject = document.getElementById('txtSubject').value;
-    const sender = document.getElementById('txtSender').value;
+    const subject = document.getElementById('txtSubject').value.trim();
+    const sender = document.getElementById('txtSender').value.trim();
+    const receiver = document.getElementById('txtReceiver').value.trim();
 
     if (!subject || !sender) {
         showStatus('create', 'Subject and Sender are required!', 'error');
@@ -100,10 +101,35 @@ async function createTask() {
 
     const createBtn = document.getElementById('btnCreate');
     createBtn.disabled = true;
-    createBtn.textContent = 'Creating...';
-    showStatus('create', 'Creating task...', 'success');
+    createBtn.textContent = 'Checking...';
 
     try {
+        // ── Duplicate Check ───────────────────────────────────────────
+        const duplicateSnapshot = await db.collection('tasks')
+            .where('subject', '==', subject)
+            .where('senderName', '==', sender)
+            .get();
+
+        if (!duplicateSnapshot.empty) {
+            // Found matching task — show warning
+            const existingTask = duplicateSnapshot.docs[0].data();
+            showStatus('create',
+                '⚠️ Task ' + existingTask.taskId + ' already exists for this email (' + existingTask.status + '). Edit the Subject field above to create a new task anyway.',
+                'error');
+            createBtn.disabled = false;
+            createBtn.textContent = 'Create';
+            // Highlight subject field to guide user
+            document.getElementById('txtSubject').style.borderColor = '#c0392b';
+            document.getElementById('txtSubject').focus();
+            return;
+        }
+
+        // Reset subject field border if previously highlighted
+        document.getElementById('txtSubject').style.borderColor = '';
+
+        createBtn.textContent = 'Creating...';
+        showStatus('create', 'Creating task...', 'success');
+
         const taskId = await generateTaskId();
         const actionDateTime = document.getElementById('txtDateTime').value;
         const comments = document.getElementById('txtComments').value;
@@ -113,7 +139,7 @@ async function createTask() {
             taskId:          taskId,
             subject:         subject,
             senderName:      sender,
-            receiverName:    document.getElementById('txtReceiver').value,
+            receiverName:    receiver,
             projectId:       document.getElementById('txtProjectID').value,
             createdDateTime: actionDateTime,
             status:          'Active',
@@ -519,6 +545,7 @@ function setCurrentTime(tab) {
 // ── Clear Forms ───────────────────────────────────────────────────────
 function clearCreate() {
     document.getElementById('txtSubject').value = '';
+    document.getElementById('txtSubject').style.borderColor = '';
     document.getElementById('txtSender').value = '';
     document.getElementById('txtReceiver').value = '';
     document.getElementById('txtDateTime').value = '';
