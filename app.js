@@ -263,7 +263,7 @@ function validateDateTime(dateTimeStr, referenceStr, tab, checkFuture = true) {
     // Check format
     const pattern = /^\d{4}-\d{2}-\d{2} \d{2}:\d{2}$/;
     if (!pattern.test(dateTimeStr)) {
-        showStatus(tab, 'Invalid date format. Use yyyy-mm-dd hh:mm', 'error');
+        showStatus(tab, '❌ Invalid date format. Use yyyy-mm-dd hh:mm', 'error');
         return false;
     }
 
@@ -271,7 +271,7 @@ function validateDateTime(dateTimeStr, referenceStr, tab, checkFuture = true) {
 
     // Check if future time
     if (checkFuture && actionTime > new Date()) {
-        showStatus(tab, 'Time cannot be in the future.', 'error');
+        showStatus(tab, '❌ Time cannot be in the future.', 'error');
         return false;
     }
 
@@ -279,7 +279,6 @@ function validateDateTime(dateTimeStr, referenceStr, tab, checkFuture = true) {
     if (referenceStr) {
         const referenceTime = new Date(referenceStr.replace(' ', 'T'));
         if (actionTime <= referenceTime) {
-            showStatus(tab, 'Time must be after ' + referenceStr, 'error');
             return false;
         }
     }
@@ -299,7 +298,10 @@ async function pauseTask() {
     }
 
     const activeSince = document.getElementById('txtActiveSincePause').value;
-    if (!validateDateTime(pauseTime, activeSince, 'pause')) return;
+    if (!validateDateTime(pauseTime, activeSince, 'pause')) {
+        showStatus('pause', '❌ Pause time must be after active since: ' + activeSince, 'error');
+        return;
+    }
 
     try {
         const docRef = db.collection('tasks').doc(taskId);
@@ -343,7 +345,10 @@ async function resumeTask() {
     }
 
     const pausedSince = document.getElementById('txtPausedSinceResume').value;
-    if (!validateDateTime(resumeTime, pausedSince, 'resume')) return;
+    if (!validateDateTime(resumeTime, pausedSince, 'resume')) {
+        showStatus('resume', '❌ Resume time must be after paused since: ' + pausedSince, 'error');
+        return;
+    }
 
     try {
         const docRef = db.collection('tasks').doc(taskId);
@@ -406,7 +411,10 @@ async function closeTask() {
     resetCloseButton();
 
     const activeSinceClose = document.getElementById('txtActiveSinceClose').value;
-    if (!validateDateTime(closeTime, activeSinceClose, 'close')) return;
+    if (!validateDateTime(closeTime, activeSinceClose, 'close')) {
+        showStatus('close', '❌ Close time must be after active since: ' + activeSinceClose, 'error');
+        return;
+    }
 
     try {
         const docRef = db.collection('tasks').doc(taskId);
