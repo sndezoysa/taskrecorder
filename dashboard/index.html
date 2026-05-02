@@ -5,9 +5,12 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>ATEX/IECEx Project Manager - Daily Tasks</title>
     <script src="https://cdnjs.cloudflare.com/ajax/libs/moment.js/2.29.4/moment.min.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/xlsx@0.18.5/dist/xlsx.full.min.js"></script>
     <script src="https://cdnjs.cloudflare.com/ajax/libs/Chart.js/3.9.1/chart.min.js"></script>
     <script src="https://www.gstatic.com/firebasejs/10.12.0/firebase-app-compat.js"></script>
     <script src="https://www.gstatic.com/firebasejs/10.12.0/firebase-firestore-compat.js"></script>
+    <script src="https://www.gstatic.com/firebasejs/10.12.0/firebase-auth-compat.js"></script>
+    <script src="../firebase-config.dev.js"></script>
     <style>
         * { margin: 0; padding: 0; box-sizing: border-box; }
 
@@ -108,6 +111,9 @@
         .status.closed { background-color: var(--closed-bg); color: var(--closed-blue); border: 1px solid #90caf9; }
 
         .numeric { text-align: center; font-weight: 500; }
+        /* Hide Days Taken on screen — shown in print only */
+        .col-days-taken { display: none; }
+        @media print { .col-days-taken { display: table-cell !important; } }
 
         .time-bar-container { display: flex; align-items: center; gap: 0.5rem; min-width: 200px; }
         .time-bar { position: relative; flex: 1; height: 24px; border-radius: 3px; overflow: hidden; background-color: #e8e8e8; border: 1px solid #d0d0d0; }
@@ -143,6 +149,80 @@
         .kpi-stat-value { font-size: 1.2rem; font-weight: 700; color: var(--primary-dark); }
 
         .last-updated { font-size: 0.75rem; opacity: 0.75; white-space: nowrap; }
+
+        /* ── Project Arrow Button ── */
+        .project-btn {
+            width: 28px; height: 28px;
+            border-radius: 50%;
+            border: 2px solid #2d7a2d;
+            background: white;
+            color: #2d7a2d;
+            font-size: 0.9rem;
+            font-weight: 700;
+            cursor: pointer;
+            display: inline-flex;
+            align-items: center;
+            justify-content: center;
+            transition: all 0.2s;
+            padding: 0;
+            line-height: 1;
+        }
+        .project-btn:hover { transform: scale(1.15); }
+        .project-btn.has-project {
+            background: #2d7a2d;
+            color: white;
+            cursor: default;
+        }
+        .project-btn.has-project:hover { transform: none; }
+
+        /* ── Print Legend ── */
+        .print-legend { display: none; }
+
+        @media print {
+            .print-legend {
+                display: block !important;
+                margin-top: 1.5rem;
+                padding: 0.8rem 1rem;
+                border: 1px solid #ccc;
+                border-radius: 6px;
+                font-size: 0.78rem;
+                color: #333;
+                page-break-inside: avoid;
+            }
+            .print-legend h4 {
+                font-size: 0.85rem;
+                font-weight: 700;
+                color: var(--primary-dark);
+                margin-bottom: 0.5rem;
+                text-transform: uppercase;
+                letter-spacing: 0.05em;
+            }
+            .print-legend-row {
+                display: flex;
+                gap: 2rem;
+                flex-wrap: wrap;
+                margin-bottom: 0.3rem;
+            }
+            .print-legend-item { display: flex; align-items: center; gap: 0.4rem; }
+            .legend-dot { width: 12px; height: 12px; border-radius: 50%; display: inline-block; }
+
+            /* Project button in print */
+            .project-btn {
+                width: 20px; height: 20px;
+                border: 2px solid #2d7a2d !important;
+                background: white !important;
+                color: #2d7a2d !important;
+                font-size: 0.7rem;
+                print-color-adjust: exact;
+                -webkit-print-color-adjust: exact;
+            }
+            .project-btn.has-project {
+                background: #2d7a2d !important;
+                color: white !important;
+                print-color-adjust: exact;
+                -webkit-print-color-adjust: exact;
+            }
+        }
 
         @media (max-width: 1024px) {
             .header-content { flex-direction: column; align-items: flex-start; }
@@ -201,10 +281,12 @@
             tbody tr { page-break-inside: avoid; }
             tbody tr:nth-child(even) td { background-color: #f9f9f9 !important; print-color-adjust: exact; -webkit-print-color-adjust: exact; }
 
-            /* Hide columns not needed in print — Received Date, Last Updated, Days Taken */
+            /* Hide columns not needed in print — Received Date, Last Updated, Project button */
             th:nth-child(6), td:nth-child(6),
             th:nth-child(7), td:nth-child(7),
-            th:nth-child(9), td:nth-child(9) { display: none !important; }
+            th:last-child, td:last-child { display: none !important; }
+            /* Show Days Taken in print */
+            .col-days-taken { display: table-cell !important; }
 
             /* Task number colors */
             .task-number { font-weight: 600; color: #111 !important; }
@@ -236,12 +318,36 @@
 </head>
 <body>
 
+<!-- Auth Screen -->
+<div id="authScreen" style="display:none; position:fixed; top:0; left:0; width:100%; height:100%; background:#f0f4f0; z-index:9999; align-items:center; justify-content:center;">
+    <div style="background:white; border-radius:12px; box-shadow:0 4px 20px rgba(0,0,0,0.15); padding:3rem 2.5rem; max-width:380px; width:90%; text-align:center;">
+        <div style="width:60px; height:60px; background:linear-gradient(135deg,#1a4d1a,#2d6b2d); border-radius:50%; margin:0 auto 1.5rem; display:flex; align-items:center; justify-content:center; color:white; font-size:1.8rem;">✓</div>
+        <h2 style="color:#1a4d1a; font-size:1.3rem; margin-bottom:0.5rem;">Task Recorder</h2>
+        <p style="color:#e65100; font-size:0.8rem; font-weight:600; margin-bottom:0.5rem;">🔧 DEVELOPMENT</p>
+        <p style="color:#666; font-size:0.9rem; margin-bottom:2rem;">ATEX/IECEx Project Manager</p>
+        <p style="color:#888; font-size:0.85rem; margin-bottom:1.5rem;">Sign in to access your dashboard</p>
+        <button onclick="signIn()" style="background:#2d6b2d; color:white; border:none; padding:0.8rem 1.5rem; border-radius:6px; font-size:0.95rem; cursor:pointer; width:100%; font-family:inherit; display:flex; align-items:center; justify-content:center; gap:0.5rem;">
+            <span style="font-size:1.1rem;">🔵</span> Sign in with Google
+        </button>
+        <div id="authError" style="color:#c0392b; font-size:0.82rem; margin-top:0.8rem;"></div>
+    </div>
+</div>
+
+<!-- Main Content -->
+<div id="mainContent" style="display:none;">
+
 <div class="header">
     <div class="header-content">
-        <h1>ATEX/IECEx Project Manager - Daily Tasks</h1>
+        <div style="display:flex; align-items:center; gap:0.8rem;">
+            <h1>ATEX/IECEx Project Manager - Daily Tasks</h1>
+            <span style="background:#e65100; color:white; font-size:0.7rem; font-weight:700; padding:0.2rem 0.5rem; border-radius:3px; letter-spacing:0.05em;">DEV</span>
+        </div>
         <div id="headerClock" class="last-updated"></div>
         <div style="display: flex; gap: 1rem; align-items: center; flex-wrap: wrap;">
-            <!-- Status count badges -->
+            <div style="font-size:0.75rem; color:rgba(255,255,255,0.75); display:flex; align-items:center; gap:0.5rem;">
+                <span id="userEmail"></span>
+                <button onclick="signOut()" style="background:rgba(255,255,255,0.15); border:1px solid rgba(255,255,255,0.3); color:white; padding:0.2rem 0.6rem; border-radius:3px; font-size:0.72rem; cursor:pointer; font-family:inherit;">Sign out</button>
+            </div>
             <div class="status-counts">
                 <div class="sc-badge sc-all sc-selected" id="badgeAll" onclick="applyStatusQuickFilter('All')">
                     <span class="sc-label">All Tasks</span>
@@ -329,6 +435,7 @@
             <div class="button-group">
                 <button class="btn-primary" onclick="loadFromFirebase()">🔄 Refresh Data</button>
                 <button class="btn-secondary" onclick="showStatistics()">📊 Statistics</button>
+                <button class="btn-secondary" onclick="exportToExcel()">⬇️ Export Excel</button>
             </div>
             <div id="loadStatus" style="font-size: 0.85rem; color: var(--gray-dark); align-self: center;"></div>
             <div style="display: flex; align-items: center; gap: 0.5rem; margin-left: auto;">
@@ -347,7 +454,7 @@
                     <input type="radio" name="taskTypeFilter" value="Created" onchange="filterData()"> Created
                 </label>
                 <label style="font-size: 0.85rem; display:flex; align-items:center; gap:0.3rem; cursor:pointer;">
-                    <input type="radio" name="taskTypeFilter" value="QMS tasks" onchange="filterData()"> QMS Task
+                    <input type="radio" name="taskTypeFilter" value="QMS Task" onchange="filterData()"> QMS Task
                 </label>
             </div>
         </div>
@@ -390,14 +497,15 @@
                         <th onclick="sortTable('createdDate')">Received Date <span class="sort-icon">↕️</span></th>
                         <th onclick="sortTable('lastUpdated')">Last Updated <span class="sort-icon">↕️</span></th>
                         <th onclick="sortTable('status')">Status <span class="sort-icon">↕️</span></th>
-                        <th onclick="sortTable('daysTaken')">Days Taken <span class="sort-icon">↕️</span></th>
+                        <th onclick="sortTable('daysTaken')" class="col-days-taken">Days Taken <span class="sort-icon">↕️</span></th>
                         <th onclick="sortTable('workTimeDays')">Work Time <span class="sort-icon">↕️</span></th>
                         <th>Time Breakdown</th>
+                        <th style="width:45px; text-align:center;">Mini Project</th>
                     </tr>
                 </thead>
                 <tbody id="tableBody">
                     <tr>
-                        <td colspan="11" class="empty-state">
+                        <td colspan="12" class="empty-state">
                             <div class="spinner"></div>
                             <p>Loading tasks from Firebase...</p>
                         </td>
@@ -406,9 +514,25 @@
             </table>
         </div>
     </div>
-</div>
 
-<!-- Statistics Modal -->
+    <!-- Print Legend -->
+    <div class="print-legend">
+        <h4>Legend</h4>
+        <div class="print-legend-row">
+            <strong>Task No Color:</strong>
+            <div class="print-legend-item"><span class="legend-dot" style="background:#1a56a0; print-color-adjust:exact; -webkit-print-color-adjust:exact;"></span> Requested</div>
+            <div class="print-legend-item"><span class="legend-dot" style="background:#7b1fa2; print-color-adjust:exact; -webkit-print-color-adjust:exact;"></span> Created</div>
+            <div class="print-legend-item"><span class="legend-dot" style="background:#e65100; print-color-adjust:exact; -webkit-print-color-adjust:exact;"></span> QMS Task</div>
+        </div>
+        <div class="print-legend-row">
+            <strong>Priority Border:</strong>
+            <div class="print-legend-item"><span style="display:inline-block;width:14px;height:14px;border-left:3px solid #c0392b;"></span> High (8-10)</div>
+            <div class="print-legend-item"><span style="display:inline-block;width:14px;height:14px;border-left:3px solid #d97706;"></span> Medium (5-7)</div>
+            <div class="print-legend-item"><span style="display:inline-block;width:14px;height:14px;border-left:3px solid #2d7a2d;"></span> Low (1-4)</div>
+        </div>
+    </div>
+
+</div>
 <div id="statsModal" class="modal">
     <div class="modal-content">
         <span class="close-modal" onclick="closeStatistics()">&times;</span>
@@ -439,17 +563,8 @@
 </div>
 
 <script>
-    // ── Firebase Configuration ────────────────────────────────────────────
-    const firebaseConfig = {
-        apiKey: "AIzaSyB8VKEBRGybHfgRJJTT2MlBl4kJK8y1PX8",
-        authDomain: "taskrecorder-9e9c3.firebaseapp.com",
-        projectId: "taskrecorder-9e9c3",
-        storageBucket: "taskrecorder-9e9c3.firebasestorage.app",
-        messagingSenderId: "416679395956",
-        appId: "1:416679395956:web:00755cd5f74785b5aa4721"
-    };
-    firebase.initializeApp(firebaseConfig);
-    const db = firebase.firestore();
+    // ── Firebase loaded from firebase-config.dev.js ───────────────────────
+    // db, auth and googleProvider are initialized there
 
     // ── State ─────────────────────────────────────────────────────────────
     let allTasks = [];
@@ -467,7 +582,7 @@
         const tbody = document.getElementById('tableBody');
         const loadStatus = document.getElementById('loadStatus');
 
-        tbody.innerHTML = `<tr><td colspan="11" class="empty-state"><div class="spinner"></div><p>Loading tasks from Firebase...</p></td></tr>`;
+        tbody.innerHTML = `<tr><td colspan="12" class="empty-state"><div class="spinner"></div><p>Loading tasks from Firebase...</p></td></tr>`;
         loadStatus.textContent = 'Loading...';
 
         try {
@@ -522,7 +637,8 @@
                     daysTaken:        daysTaken,
                     comments:         String(d.comments || ''),
                     taskType:         String(d.taskType || 'Requested'),
-                    priorityScore:    parseInt(d.priorityScore || 5)
+                    priorityScore:    parseInt(d.priorityScore || 5),
+                    linkedProjectId:  String(d.linkedProjectId || '')
                 };
             }).filter(t => t.taskId);
 
@@ -536,7 +652,7 @@
 
         } catch (error) {
             console.error('Firebase error:', error);
-            tbody.innerHTML = `<tr><td colspan="11" class="empty-state"><p>❌ Error loading data: ${error.message}</p></td></tr>`;
+            tbody.innerHTML = `<tr><td colspan="12" class="empty-state"><p>❌ Error loading data: ${error.message}</p></td></tr>`;
             loadStatus.textContent = '❌ Load failed';
         }
     }
@@ -671,7 +787,7 @@
         const tbody = document.getElementById('tableBody');
 
         if (!tasks || tasks.length === 0) {
-            tbody.innerHTML = `<tr><td colspan="11" class="empty-state"><div style="font-size:2rem;margin-bottom:0.5rem;">📭</div><p>No tasks found for the selected filters.</p></td></tr>`;
+            tbody.innerHTML = `<tr><td colspan="12" class="empty-state"><div style="font-size:2rem;margin-bottom:0.5rem;">📭</div><p>No tasks found for the selected filters.</p></td></tr>`;
             return;
         }
 
@@ -698,6 +814,13 @@
                 const createdDateStr = task.createdDate ? String(task.createdDate).substring(0, 10) : 'N/A';
                 const lastUpdatedStr = task.lastUpdated ? String(task.lastUpdated).substring(0, 10) : 'N/A';
 
+                const hasProject = task.linkedProjectId && task.linkedProjectId !== '';
+                const projectBtnClass = hasProject ? 'project-btn has-project' : 'project-btn';
+                const projectBtnTitle = hasProject ? 'Project ' + task.linkedProjectId + ' already exists' : 'Create mini project from this task';
+                const projectBtnClick = hasProject
+                    ? `showProjectInfo(event, '${task.linkedProjectId}', '${task.taskId}')`
+                    : `createProject(event, '${task.taskId}', \`${String(task.subject).replace(/`/g, '\\`')}\`, '${task.site}')`;
+
                 return `
                     <tr onclick="showCommentPanel(event, \`${commentEscaped}\`, '${String(task.taskId)}')" style="cursor:pointer;">
                         <td class="task-number ${String(task.taskType).toLowerCase().replace(' ', '-')}" style="border-left:${getPriorityBorder(task.priorityScore)}; padding-left:0.6rem;">${String(task.taskId)}</td>
@@ -708,7 +831,7 @@
                         <td>${createdDateStr}</td>
                         <td>${lastUpdatedStr}</td>
                         <td><span class="status ${statusClass}">${String(task.status)}</span></td>
-                        <td class="numeric">${daysTaken.toFixed(1)} d</td>
+                        <td class="numeric col-days-taken">${daysTaken.toFixed(1)} d</td>
                         <td class="numeric">${displayWorkTimeDays.toFixed(1)} d</td>
                         <td>
                             <div class="time-bar-container" title="Work: ${displayWorkTimeDays.toFixed(1)}d | Total: ${daysTaken.toFixed(1)}d">
@@ -718,6 +841,9 @@
                                 </div>
                                 <div class="time-label">${Math.round(workPercent)}%</div>
                             </div>
+                        </td>
+                        <td style="text-align:center;" onclick="event.stopPropagation()">
+                            <button class="${projectBtnClass}" title="${projectBtnTitle}" onclick="${projectBtnClick}">→</button>
                         </td>
                     </tr>
                 `;
@@ -782,6 +908,207 @@
         document.getElementById('printKpiClosed').textContent = avgClosedWorkTime;
         document.getElementById('printKpiAll').textContent    = avgAllWorkTime;
         document.getElementById('printKpiTotal').textContent  = avgAllTotalTime;
+    }
+
+    // ── Excel Export ──────────────────────────────────────────────────────
+    async function exportToExcel() {
+        if (!filteredTasks || filteredTasks.length === 0) {
+            alert('No data to export. Please load data first.');
+            return;
+        }
+
+        const loadStatus = document.getElementById('loadStatus');
+        const prev = loadStatus.textContent;
+        loadStatus.textContent = '⏳ Preparing export...';
+
+        try {
+            // Fetch full data from Firebase for filtered tasks
+            // (filteredTasks has display data, we need raw Firebase data for exact field values)
+            const taskIds = filteredTasks.map(t => t.taskId);
+
+            // Build rows matching original Excel structure + Priority
+            const rows = filteredTasks.map(task => ({
+                'Task ID':          task.taskId,
+                'Subject':          task.subject,
+                'Sender Name':      task.sender,
+                'Receiver Name':    '',  // not stored in display data — fetch below
+                'Project ID':       task.projectId === '-' ? '' : task.projectId,
+                'Created DateTime': '',  // raw value — fetch below
+                'Status':           task.status,
+                'Activate Time':    '',  // raw value — fetch below
+                'Inactivate Time':  '',  // raw value — fetch below
+                'Work Time Min':    task.workTimeMinStored,
+                'Comments':         task.comments,
+                'Site':             task.site,
+                'Task Type':        task.taskType,
+                'Priority':         task.priorityScore
+            }));
+
+            // Fetch raw Firebase data to fill in the missing fields
+            const snapshot = await db.collection('tasks')
+                .orderBy('taskId', 'asc')
+                .get();
+
+            const rawMap = {};
+            snapshot.docs.forEach(doc => {
+                const d = doc.data();
+                rawMap[d.taskId] = d;
+            });
+
+            // Fill in raw fields
+            rows.forEach(row => {
+                const raw = rawMap[row['Task ID']];
+                if (raw) {
+                    row['Receiver Name']    = raw.receiverName || '';
+                    row['Created DateTime'] = raw.createdDateTime || '';
+                    row['Activate Time']    = raw.activateTime || '';
+                    row['Inactivate Time']  = raw.inactivateTime || '';
+                }
+            });
+
+            // Create worksheet
+            const ws = XLSX.utils.json_to_sheet(rows, {
+                header: [
+                    'Task ID', 'Subject', 'Sender Name', 'Receiver Name',
+                    'Project ID', 'Created DateTime', 'Status',
+                    'Activate Time', 'Inactivate Time', 'Work Time Min',
+                    'Comments', 'Site', 'Task Type', 'Priority'
+                ]
+            });
+
+            // Set column widths
+            ws['!cols'] = [
+                { wch: 8 },   // Task ID
+                { wch: 50 },  // Subject
+                { wch: 30 },  // Sender Name
+                { wch: 20 },  // Receiver Name
+                { wch: 12 },  // Project ID
+                { wch: 18 },  // Created DateTime
+                { wch: 10 },  // Status
+                { wch: 18 },  // Activate Time
+                { wch: 18 },  // Inactivate Time
+                { wch: 14 },  // Work Time Min
+                { wch: 60 },  // Comments
+                { wch: 12 },  // Site
+                { wch: 12 },  // Task Type
+                { wch: 10 },  // Priority
+            ];
+
+            // Create workbook
+            const wb = XLSX.utils.book_new();
+            XLSX.utils.book_append_sheet(wb, ws, 'Sheet1');
+
+            // Generate filename with date
+            const now = new Date();
+            const pad = n => String(n).padStart(2, '0');
+            const dateStr = `${now.getFullYear()}-${pad(now.getMonth()+1)}-${pad(now.getDate())}`;
+            const filename = `TaskLog_Export_${dateStr}.xlsx`;
+
+            // Download
+            XLSX.writeFile(wb, filename);
+
+            loadStatus.textContent = `✅ Exported ${rows.length} tasks to ${filename}`;
+            setTimeout(() => { loadStatus.textContent = prev; }, 4000);
+
+        } catch (error) {
+            console.error('Export error:', error);
+            loadStatus.textContent = '❌ Export failed: ' + error.message;
+            setTimeout(() => { loadStatus.textContent = prev; }, 4000);
+        }
+    }
+
+    // ── Project Functions ─────────────────────────────────────────────────
+    async function generateProjectId() {
+        const snapshot = await db.collection('projects')
+            .orderBy('projectId', 'desc')
+            .limit(1)
+            .get();
+        if (snapshot.empty) return 'P0001';
+        const last = snapshot.docs[0].data();
+        const lastNum = parseInt(last.projectId.replace('P', ''), 10);
+        return 'P' + String(lastNum + 1).padStart(4, '0');
+    }
+
+    async function createProject(event, taskId, title, site) {
+        event.stopPropagation();
+        const btn = event.currentTarget;
+
+        // Double click confirmation
+        if (!btn.dataset.confirm) {
+            btn.dataset.confirm = '1';
+            btn.style.backgroundColor = '#d97706';
+            btn.style.borderColor = '#d97706';
+            btn.style.color = 'white';
+            btn.title = 'Click again to confirm project creation';
+            setTimeout(() => {
+                if (btn.dataset.confirm) {
+                    delete btn.dataset.confirm;
+                    btn.style.backgroundColor = '';
+                    btn.style.borderColor = '';
+                    btn.style.color = '';
+                    btn.title = 'Create mini project from this task';
+                }
+            }, 5000);
+            return;
+        }
+
+        delete btn.dataset.confirm;
+        btn.disabled = true;
+        btn.textContent = '...';
+
+        try {
+            const projectId = await generateProjectId();
+            const now = new Date();
+            const pad = n => String(n).padStart(2, '0');
+            const createdAt = `${now.getFullYear()}-${pad(now.getMonth()+1)}-${pad(now.getDate())} ${pad(now.getHours())}:${pad(now.getMinutes())}`;
+
+            // Create project document
+            await db.collection('projects').doc(projectId).set({
+                projectId:    projectId,
+                sourceTaskId: taskId,
+                title:        title,
+                site:         site,
+                createdAt:    createdAt,
+                status:       'Active'
+            });
+
+            // Update task with linked project ID
+            await db.collection('tasks').doc(taskId).update({
+                linkedProjectId: projectId
+            });
+
+            // Update button to green
+            btn.className = 'project-btn has-project';
+            btn.textContent = '→';
+            btn.title = 'Project ' + projectId + ' created ✅';
+            btn.disabled = false;
+            btn.onclick = (e) => showProjectInfo(e, projectId, taskId);
+
+            // Update allTasks in memory
+            const task = allTasks.find(t => t.taskId === taskId);
+            if (task) task.linkedProjectId = projectId;
+
+            // Show brief success message
+            const loadStatus = document.getElementById('loadStatus');
+            const prev = loadStatus.textContent;
+            loadStatus.textContent = '✅ Project ' + projectId + ' created from Task ' + taskId;
+            setTimeout(() => { loadStatus.textContent = prev; }, 4000);
+
+        } catch (error) {
+            console.error('Error creating project:', error);
+            btn.disabled = false;
+            btn.textContent = '→';
+            btn.style.borderColor = '#c0392b';
+            setTimeout(() => { btn.style.borderColor = ''; }, 3000);
+        }
+    }
+
+    function showProjectInfo(event, projectId, taskId) {
+        event.stopPropagation();
+        const loadStatus = document.getElementById('loadStatus');
+        const prev = loadStatus.textContent;
+        loadStatus.textContent = 'ℹ️ Task ' + taskId + ' → Project ' + projectId + ' already exists';
+        setTimeout(() => { loadStatus.textContent = prev; }, 4000);
     }
 
     // ── Comment Panel ─────────────────────────────────────────────────────
@@ -984,6 +1311,39 @@
 
     function closeKpiChart() { document.getElementById('kpiChartModal').classList.remove('show'); }
 
+    // ── Authentication ────────────────────────────────────────────────────
+    function signIn() {
+        document.getElementById('authError').textContent = '';
+
+        // Try popup first — works on Chrome, Firefox, Edge
+        auth.signInWithPopup(googleProvider)
+            .catch(error => {
+                console.error('Popup error:', error.code);
+                // If popup blocked (Safari) — fall back to redirect
+                if (error.code === 'auth/popup-blocked' ||
+                    error.code === 'auth/popup-closed-by-user' ||
+                    error.code === 'auth/cancelled-popup-request') {
+                    document.getElementById('authError').textContent = 'Popup blocked — trying redirect...';
+                    auth.signInWithRedirect(googleProvider);
+                } else {
+                    document.getElementById('authError').textContent = 'Sign in failed: ' + error.message;
+                }
+            });
+    }
+
+    // Handle redirect result in case redirect was used
+    auth.getRedirectResult()
+        .then(result => {
+            if (result && result.user) {
+                console.log('Signed in via redirect:', result.user.email);
+            }
+        })
+        .catch(error => {
+            if (error.code !== 'auth/no-auth-event') {
+                console.error('Redirect result error:', error);
+            }
+        });
+
     // ── Clock ─────────────────────────────────────────────────────────────
     function updateClock() {
         const now = new Date();
@@ -996,14 +1356,43 @@
     updateClock();
     setInterval(updateClock, 30000);
 
+    // ── Authentication ────────────────────────────────────────────────────
+    function signIn() {
+        document.getElementById('authError').textContent = '';
+        auth.signInWithPopup(googleProvider)
+            .catch(error => {
+                console.error('Sign in error:', error);
+                document.getElementById('authError').textContent = 'Sign in failed: ' + error.message;
+            });
+    }
+
+    function signOut() {
+        auth.signOut();
+    }
+
+    auth.onAuthStateChanged(function(user) {
+        const authScreen  = document.getElementById('authScreen');
+        const mainContent = document.getElementById('mainContent');
+        const userEmail   = document.getElementById('userEmail');
+
+        if (user) {
+            authScreen.style.display  = 'none';
+            mainContent.style.display = 'block';
+            userEmail.textContent     = user.email;
+            loadFromFirebase();
+        } else {
+            authScreen.style.display  = 'flex';
+            mainContent.style.display = 'none';
+        }
+    });
+
     // ── Modal close on backdrop click ─────────────────────────────────────
     window.onclick = function(event) {
         if (event.target === document.getElementById('statsModal')) closeStatistics();
         if (event.target === document.getElementById('kpiChartModal')) closeKpiChart();
     };
-
-    // ── Auto load on page open ────────────────────────────────────────────
-    document.addEventListener('DOMContentLoaded', loadFromFirebase);
 </script>
+
+</div> <!-- end mainContent -->
 </body>
 </html>
