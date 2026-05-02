@@ -1,0 +1,212 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Task Recorder DEV</title>
+    <script src="https://appsforoffice.microsoft.com/lib/1/hosted/office.js"></script>
+    <script src="https://www.gstatic.com/firebasejs/10.12.0/firebase-app-compat.js"></script>
+    <script src="https://www.gstatic.com/firebasejs/10.12.0/firebase-firestore-compat.js"></script>
+    <link rel="stylesheet" href="styles.css">
+    <style>
+        /* DEV indicator */
+        .dev-banner {
+            background: #e65100;
+            color: white;
+            text-align: center;
+            font-size: 0.7rem;
+            font-weight: 700;
+            padding: 0.2rem;
+            letter-spacing: 0.1em;
+        }
+    </style>
+</head>
+<body>
+    <!-- DEV Banner -->
+    <div class="dev-banner">🔧 DEVELOPMENT — taskrecorder-dev</div>
+
+    <div id="app">
+
+        <!-- Header -->
+        <div class="header">
+            <h1>Task Recorder</h1>
+            <a href="https://taskrecorder-dev.web.app"
+               target="_blank"
+               style="color:rgba(255,255,255,0.8); font-size:0.75rem; text-decoration:none; letter-spacing:0.3px;">
+                📊 Dev Dashboard ↗
+            </a>
+        </div>
+
+        <!-- Tabs -->
+        <div class="tabs">
+            <button class="tab active" onclick="showTab('create')">Create</button>
+            <button class="tab" onclick="showTab('pause')">Pause</button>
+            <button class="tab" onclick="showTab('resume')">Resume</button>
+            <button class="tab" onclick="showTab('close')">Close</button>
+        </div>
+
+        <!-- CREATE TAB -->
+        <div id="tab-create" class="tab-content active">
+            <div class="form-group">
+                <label>Subject</label>
+                <input type="text" id="txtSubject" placeholder="Click Extract to fill — editable if needed"/>
+            </div>
+            <div class="form-group">
+                <label>Sender</label>
+                <input type="text" id="txtSender" readonly placeholder="Click Extract to fill"/>
+            </div>
+            <div class="form-group">
+                <label>Receiver</label>
+                <input type="text" id="txtReceiver" readonly placeholder="Click Extract to fill"/>
+            </div>
+            <div class="form-group">
+                <label>Date & Time</label>
+                <input type="text" id="txtDateTime" readonly placeholder="Click Extract to fill"/>
+            </div>
+            <div class="form-group">
+                <label>Site/Company</label>
+                <select id="cmbSite">
+                    <option value="MEDK">MEDK</option>
+                    <option value="MELK">MELK</option>
+                    <option value="METC">METC</option>
+                    <option value="MEIN">MEIN</option>
+                    <option value="MEFR">MEFR</option>
+                    <option value="MEPT">MEPT</option>
+                    <option value="MEMY">MEMY</option>
+                    <option value="MEUS">MEUS</option>
+                    <option value="FAS">FAS</option>
+                    <option value="MEMAF">MEMAF</option>
+                    <option value="MAKEEN Other">MAKEEN Other</option>
+                    <option value="External">External</option>
+                </select>
+            </div>
+            <div class="form-group">
+                <label>Project ID</label>
+                <input type="text" id="txtProjectID" placeholder="Optional"/>
+            </div>
+            <div class="form-group">
+                <label>Priority Score</label>
+                <select id="txtPriority">
+                    <option value="1">1 — Lowest</option>
+                    <option value="2">2</option>
+                    <option value="3">3</option>
+                    <option value="4">4</option>
+                    <option value="5" selected>5 — Medium</option>
+                    <option value="6">6</option>
+                    <option value="7">7</option>
+                    <option value="8">8</option>
+                    <option value="9">9</option>
+                    <option value="10">10 — Highest</option>
+                </select>
+            </div>
+            <div class="form-group">
+                <label>Task Type</label>
+                <div class="radio-group">
+                    <label><input type="radio" name="taskType" value="Requested" checked> Requested</label>
+                    <label><input type="radio" name="taskType" value="Created"> Created</label>
+                    <label><input type="radio" name="taskType" value="QMS Task"> QMS Task</label>
+                </div>
+            </div>
+            <div class="form-group">
+                <label>Comments</label>
+                <textarea id="txtComments" rows="3" placeholder="Optional comments"></textarea>
+            </div>
+            <div class="button-row">
+                <button class="btn-secondary" onclick="extractEmail()">Extract</button>
+                <button class="btn-secondary" onclick="clearCreate()">Clear</button>
+                <button class="btn-primary" id="btnCreate" disabled onclick="createTask()">Create</button>
+            </div>
+            <div id="status-create" class="status-msg"></div>
+        </div>
+
+        <!-- PAUSE TAB -->
+        <div id="tab-pause" class="tab-content">
+            <div class="form-group">
+                <label>Active Task</label>
+                <select id="cmbActiveTaskPause" onchange="taskSelectedPause()">
+                    <option value="">-- Select Task --</option>
+                </select>
+            </div>
+            <div class="form-group">
+                <label>Active Since</label>
+                <input type="text" id="txtActiveSincePause" readonly/>
+            </div>
+            <div class="form-group">
+                <label>Pause Time</label>
+                <input type="text" id="txtDateTimePause" placeholder="yyyy-mm-dd hh:mm"/>
+            </div>
+            <div class="form-group">
+                <label>Comments</label>
+                <textarea id="txtCommentsPause" rows="3"></textarea>
+            </div>
+            <div class="button-row">
+                <button class="btn-secondary" onclick="setCurrentTime('pause')">Now</button>
+                <button class="btn-secondary" onclick="extractDateTime('pause')">Extract</button>
+                <button class="btn-secondary" onclick="clearPause()">Clear</button>
+                <button class="btn-primary" id="btnPause" disabled onclick="pauseTask()">Pause</button>
+            </div>
+            <div id="status-pause" class="status-msg"></div>
+        </div>
+
+        <!-- RESUME TAB -->
+        <div id="tab-resume" class="tab-content">
+            <div class="form-group">
+                <label>Paused Task</label>
+                <select id="cmbPausedTaskResume" onchange="taskSelectedResume()">
+                    <option value="">-- Select Task --</option>
+                </select>
+            </div>
+            <div class="form-group">
+                <label>Paused Since</label>
+                <input type="text" id="txtPausedSinceResume" readonly/>
+            </div>
+            <div class="form-group">
+                <label>Resume Time</label>
+                <input type="text" id="txtDateTimeResume" placeholder="yyyy-mm-dd hh:mm"/>
+            </div>
+            <div class="form-group">
+                <label>Comments</label>
+                <textarea id="txtCommentsResume" rows="3"></textarea>
+            </div>
+            <div class="button-row">
+                <button class="btn-secondary" onclick="setCurrentTime('resume')">Now</button>
+                <button class="btn-secondary" onclick="extractDateTime('resume')">Extract</button>
+                <button class="btn-secondary" onclick="clearResume()">Clear</button>
+                <button class="btn-primary" id="btnResume" disabled onclick="resumeTask()">Resume</button>
+            </div>
+            <div id="status-resume" class="status-msg"></div>
+        </div>
+
+        <!-- CLOSE TAB -->
+        <div id="tab-close" class="tab-content">
+            <div class="form-group">
+                <label>Active Task</label>
+                <select id="cmbActiveTaskClose" onchange="taskSelectedClose()">
+                    <option value="">-- Select Task --</option>
+                </select>
+            </div>
+            <div class="form-group">
+                <label>Active Since</label>
+                <input type="text" id="txtActiveSinceClose" readonly/>
+            </div>
+            <div class="form-group">
+                <label>Close Time</label>
+                <input type="text" id="txtDateTimeClose" placeholder="yyyy-mm-dd hh:mm"/>
+            </div>
+            <div class="form-group">
+                <label>Comments</label>
+                <textarea id="txtCommentsClose" rows="3"></textarea>
+            </div>
+            <div class="button-row">
+                <button class="btn-secondary" onclick="setCurrentTime('close')">Now</button>
+                <button class="btn-secondary" onclick="extractDateTime('close')">Extract</button>
+                <button class="btn-secondary" onclick="clearClose()">Clear</button>
+                <button class="btn-primary" id="btnClose" disabled onclick="closeTask()">Close</button>
+            </div>
+            <div id="status-close" class="status-msg"></div>
+        </div>
+
+    </div>
+    <script src="app-dev.js"></script>
+</body>
+</html>
