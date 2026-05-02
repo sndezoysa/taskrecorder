@@ -1,0 +1,7 @@
+{
+  "projects": {
+    "default": "taskrecorder-dev",
+    "development": "taskrecorder-dev",
+    "production": "taskrecorder-9e9c3"
+  }
+}
