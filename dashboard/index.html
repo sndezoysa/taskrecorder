@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>ATEX/IECEx Project Manager - Daily Tasks</title>
+    <title>ATEX/IECEx Project Manager - Tasks</title>
     <script src="https://cdnjs.cloudflare.com/ajax/libs/moment.js/2.29.4/moment.min.js"></script>
     <script src="https://cdn.jsdelivr.net/npm/xlsx@0.18.5/dist/xlsx.full.min.js"></script>
     <script src="https://cdnjs.cloudflare.com/ajax/libs/Chart.js/3.9.1/chart.min.js"></script>
@@ -299,7 +299,7 @@
             .print-kpi-avg-sub { font-size: 0.65rem; color: #999; }
 
             /* Page setup */
-            @page { margin: 1.0cm; size: A4 landscape; }
+            @page { margin: 0.5cm; size: A4 landscape; }
             body { background: white !important; font-size: 0.85rem; }
 
             .container { padding: 0; margin: 0; max-width: 100%; }
@@ -317,9 +317,10 @@
             tbody tr:nth-child(even) td { background-color: #f9f9f9 !important; print-color-adjust: exact; -webkit-print-color-adjust: exact; }
 
             /* Hide columns not needed in print — Received Date, Last Updated, Project button, Edit button */
-            th:nth-child(6), td:nth-child(6),
+            /*th:nth-child(6), td:nth-child(6),*/
             th:nth-child(7), td:nth-child(7),
             th:last-child, td:last-child,
+            th:nth-last-child(2), td:nth-last-child(2),
             .no-print { display: none !important; }
             /* Show Days Taken in print */
             .col-days-taken { display: table-cell !important; }
@@ -356,7 +357,7 @@
 
 <div class="header">
     <div class="header-content">
-        <h1>ATEX/IECEx Project Manager - Daily Tasks</h1>
+        <h1>ATEX/IECEx Project Manager - Tasks</h1>
         <div id="headerClock" class="last-updated"></div>
         <div style="display: flex; gap: 1rem; align-items: center; flex-wrap: wrap;">
             <div class="status-counts">
@@ -400,7 +401,7 @@
 
 <!-- Print Only Header -->
 <div class="print-header">
-    <h1>ATEX/IECEx Project Manager - Daily Tasks</h1>
+    <h1>ATEX/IECEx Project Manager - Tasks</h1>
     <div class="print-date" id="printDate"></div>
     <div class="print-kpi" style="display:none;">
         <div class="print-kpi-box">
@@ -512,15 +513,15 @@
                 <thead>
                     <tr>
                         <th onclick="sortTable('taskId')" style="width:55px;">Task No <span class="sort-icon">↕️</span></th>
-                        <th onclick="sortTable('projectId')" style="width:100px;">Project ID <span class="sort-icon">↕️</span></th>
+                        <th onclick="sortTable('projectId')" style="width:100px;">Project<span class="sort-icon">↕️</span></th>
                         <th onclick="sortTable('subject')">Title <span class="sort-icon">↕️</span></th>
                         <th onclick="sortTable('sender')">Requester <span class="sort-icon">↕️</span></th>
-                        <th onclick="sortTable('site')">Company/Site <span class="sort-icon">↕️</span></th>
+                        <th onclick="sortTable('site')">Company <span class="sort-icon">↕️</span></th>
                         <th onclick="sortTable('createdDate')">Received Date <span class="sort-icon">↕️</span></th>
                         <th onclick="sortTable('lastUpdated')" class="col-last-updated">Last Updated <span class="sort-icon">↕️</span></th>
                         <th onclick="sortTable('status')">Status <span class="sort-icon">↕️</span></th>
                         <th onclick="sortTable('daysTaken')" class="col-days-taken">Days Taken <span class="sort-icon">↕️</span></th>
-                        <th onclick="sortTable('workTimeDays')">Work Time <span class="sort-icon">↕️</span></th>
+                        <th onclick="sortTable('workTimeDays')">My Time <span class="sort-icon">↕️</span></th>
                         <th>Time Breakdown</th>
                         <th style="width:45px; text-align:center;">Mini Project</th>
                         <th style="width:35px;" class="no-print"></th>
