@@ -5,7 +5,7 @@
     xmlns:bt="http://schemas.microsoft.com/office/officeappbasictypes/1.0"
     xsi:type="MailApp">
 
-    <Id>7a516741-44g7-5883-9165-f6c560e14576</Id>
+    <Id>2fe6a66f-f69c-4484-b274-9b0794504f51</Id>
     <Version>2.0.0.0</Version>
     <ProviderName>TaskRecorder</ProviderName>
     <DefaultLocale>en-US</DefaultLocale>
