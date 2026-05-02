@@ -112,6 +112,8 @@
         /* Hide Days Taken on screen — shown in print only */
         .col-days-taken { display: none; }
         @media print { .col-days-taken { display: table-cell !important; } }
+        /* Hide Last Updated on screen */
+        .col-last-updated { display: none; }
 
         .time-bar-container { display: flex; align-items: center; gap: 0.5rem; min-width: 200px; }
         .time-bar { position: relative; flex: 1; height: 24px; border-radius: 3px; overflow: hidden; background-color: #e8e8e8; border: 1px solid #d0d0d0; }
@@ -515,7 +517,7 @@
                         <th onclick="sortTable('sender')">Requester <span class="sort-icon">↕️</span></th>
                         <th onclick="sortTable('site')">Company/Site <span class="sort-icon">↕️</span></th>
                         <th onclick="sortTable('createdDate')">Received Date <span class="sort-icon">↕️</span></th>
-                        <th onclick="sortTable('lastUpdated')">Last Updated <span class="sort-icon">↕️</span></th>
+                        <th onclick="sortTable('lastUpdated')" class="col-last-updated">Last Updated <span class="sort-icon">↕️</span></th>
                         <th onclick="sortTable('status')">Status <span class="sort-icon">↕️</span></th>
                         <th onclick="sortTable('daysTaken')" class="col-days-taken">Days Taken <span class="sort-icon">↕️</span></th>
                         <th onclick="sortTable('workTimeDays')">Work Time <span class="sort-icon">↕️</span></th>
@@ -558,22 +560,25 @@
     </div>
 
 </div> <!-- end container -->
-        <h4>Legend</h4>
-        <div class="print-legend-row">
-            <strong>Task No Color:</strong>
-            <div class="print-legend-item"><span class="legend-dot" style="background:#1a56a0; print-color-adjust:exact; -webkit-print-color-adjust:exact;"></span> Requested</div>
-            <div class="print-legend-item"><span class="legend-dot" style="background:#7b1fa2; print-color-adjust:exact; -webkit-print-color-adjust:exact;"></span> Created</div>
-            <div class="print-legend-item"><span class="legend-dot" style="background:#e65100; print-color-adjust:exact; -webkit-print-color-adjust:exact;"></span> QMS Task</div>
-        </div>
-        <div class="print-legend-row">
-            <strong>Priority Border:</strong>
-            <div class="print-legend-item"><span style="display:inline-block;width:14px;height:14px;border-left:3px solid #c0392b;"></span> High (8-10)</div>
-            <div class="print-legend-item"><span style="display:inline-block;width:14px;height:14px;border-left:3px solid #d97706;"></span> Medium (5-7)</div>
-            <div class="print-legend-item"><span style="display:inline-block;width:14px;height:14px;border-left:3px solid #2d7a2d;"></span> Low (1-4)</div>
-        </div>
-    </div>
 
+<!-- Print Only Legend -->
+<div class="print-legend">
+    <h4>Legend</h4>
+    <div class="print-legend-row">
+        <strong>Task No Color:</strong>
+        <div class="print-legend-item"><span class="legend-dot" style="background:#1a56a0; print-color-adjust:exact; -webkit-print-color-adjust:exact;"></span> Requested</div>
+        <div class="print-legend-item"><span class="legend-dot" style="background:#7b1fa2; print-color-adjust:exact; -webkit-print-color-adjust:exact;"></span> Created</div>
+        <div class="print-legend-item"><span class="legend-dot" style="background:#e65100; print-color-adjust:exact; -webkit-print-color-adjust:exact;"></span> QMS Task</div>
+    </div>
+    <div class="print-legend-row">
+        <strong>Priority Border:</strong>
+        <div class="print-legend-item"><span style="display:inline-block;width:14px;height:14px;border-left:3px solid #c0392b;"></span> High (8-10)</div>
+        <div class="print-legend-item"><span style="display:inline-block;width:14px;height:14px;border-left:3px solid #d97706;"></span> Medium (5-7)</div>
+        <div class="print-legend-item"><span style="display:inline-block;width:14px;height:14px;border-left:3px solid #2d7a2d;"></span> Low (1-4)</div>
+    </div>
 </div>
+
+
 <div id="statsModal" class="modal">
     <div class="modal-content">
         <span class="close-modal" onclick="closeStatistics()">&times;</span>
@@ -879,7 +884,7 @@
                         <td class="sender-cell" title="${String(task.sender)}">${String(task.sender).split(' ').slice(0, 2).join(' ')}</td>
                         <td><span class="site-badge">${String(task.site)}</span></td>
                         <td>${createdDateStr}</td>
-                        <td>${lastUpdatedStr}</td>
+                        <td class="col-last-updated">${lastUpdatedStr}</td>
                         <td><span class="status ${statusClass}">${String(task.status)}</span></td>
                         <td class="numeric col-days-taken">${daysTaken.toFixed(1)} d</td>
                         <td class="numeric">${displayWorkTimeDays.toFixed(1)} d</td>
@@ -1084,38 +1089,17 @@
         event.stopPropagation();
         const btn = event.currentTarget;
 
-        // Double click confirmation
-        if (!btn.dataset.confirm) {
-            btn.dataset.confirm = '1';
-            btn.style.backgroundColor = '#d97706';
-            btn.style.borderColor = '#d97706';
-            btn.style.color = 'white';
-            btn.title = 'Click again to confirm';
-            setTimeout(() => {
-                if (btn.dataset.confirm) {
-                    delete btn.dataset.confirm;
-                    btn.style.backgroundColor = '';
-                    btn.style.borderColor = '';
-                    btn.style.color = '';
-                    btn.title = 'Create mini project from this task';
-                }
-            }, 5000);
-            return;
-        }
-
-        delete btn.dataset.confirm;
         btn.disabled = true;
         btn.textContent = '...';
 
         try {
             const projectId = await generateProjectId();
 
-            // Only update the task — no projects collection needed
             await db.collection('tasks').doc(taskId).update({
                 linkedProjectId: projectId
             });
 
-            // Update button to green
+            // Update button to green immediately
             btn.className = 'project-btn has-project';
             btn.textContent = '→';
             btn.title = 'Mini Project ' + projectId + ' ✅';
@@ -1128,7 +1112,7 @@
 
             const loadStatus = document.getElementById('loadStatus');
             const prev = loadStatus.textContent;
-            loadStatus.textContent = '✅ Mini Project created from Task ' + taskId;
+            loadStatus.textContent = '✅ Mini Project ' + projectId + ' created from Task ' + taskId;
             setTimeout(() => { loadStatus.textContent = prev; }, 4000);
 
         } catch (error) {
