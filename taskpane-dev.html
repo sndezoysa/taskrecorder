@@ -7,9 +7,9 @@
     <script src="https://appsforoffice.microsoft.com/lib/1/hosted/office.js"></script>
     <script src="https://www.gstatic.com/firebasejs/10.12.0/firebase-app-compat.js"></script>
     <script src="https://www.gstatic.com/firebasejs/10.12.0/firebase-firestore-compat.js"></script>
+    <script src="https://www.gstatic.com/firebasejs/10.12.0/firebase-auth-compat.js"></script>
     <link rel="stylesheet" href="styles.css">
     <style>
-        /* DEV indicator */
         .dev-banner {
             background: #e65100;
             color: white;
@@ -22,10 +22,27 @@
     </style>
 </head>
 <body>
+
     <!-- DEV Banner -->
     <div class="dev-banner">🔧 DEVELOPMENT — taskrecorder-dev</div>
 
-    <div id="app">
+    <!-- Auth Screen -->
+    <div id="authScreen" style="display:none; padding:1.5rem; text-align:center;">
+        <div style="width:45px; height:45px; background:linear-gradient(135deg,#1a4d1a,#2d6b2d); border-radius:50%; margin:0 auto 1rem; display:flex; align-items:center; justify-content:center; color:white; font-size:1.3rem;">✓</div>
+        <h2 style="color:#1a4d1a; font-size:0.95rem; margin-bottom:0.3rem;">Task Recorder DEV</h2>
+        <p style="color:#e65100; font-size:0.75rem; font-weight:600; margin-bottom:1rem;">🔧 DEVELOPMENT</p>
+        <p style="color:#666; font-size:0.8rem; margin-bottom:1rem;">Sign in to continue</p>
+        <button onclick="signIn()" style="background:#2d6b2d; color:white; border:none; padding:0.6rem 1rem; border-radius:5px; font-size:0.82rem; cursor:pointer; width:100%; font-family:inherit; margin-bottom:0.5rem;">
+            🔵 Sign in with Google
+        </button>
+        <button onclick="refreshAuth()" style="background:#f0f0f0; color:#333; border:1px solid #ddd; padding:0.5rem 1rem; border-radius:5px; font-size:0.78rem; cursor:pointer; width:100%; font-family:inherit;">
+            🔄 I've signed in — Refresh
+        </button>
+        <div id="authError" style="color:#666; font-size:0.75rem; margin-top:0.8rem; line-height:1.4;"></div>
+    </div>
+
+    <!-- Main App -->
+    <div id="app" style="display:none;">
 
         <!-- Header -->
         <div class="header">

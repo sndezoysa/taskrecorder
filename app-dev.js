@@ -9,13 +9,51 @@ const firebaseConfig = {
 };
 firebase.initializeApp(firebaseConfig);
 const db = firebase.firestore();
+const auth = firebase.auth();
+const googleProvider = new firebase.auth.GoogleAuthProvider();
 console.log("🔧 DEV add-in connected to taskrecorder-dev");
+
 // ── Office.js Initialization ──────────────────────────────────────────
 Office.onReady(function (info) {
     if (info.host === Office.HostType.Outlook) {
-        console.log("Task Recorder add-in loaded successfully.");
+        console.log("Task Recorder DEV add-in loaded.");
+
+        auth.onAuthStateChanged(function(user) {
+            if (user) {
+                document.getElementById('authScreen').style.display = 'none';
+                document.getElementById('app').style.display = 'block';
+                console.log('Signed in as:', user.email);
+            } else {
+                document.getElementById('authScreen').style.display = 'block';
+                document.getElementById('app').style.display = 'none';
+            }
+        });
     }
 });
+
+// ── Sign In ───────────────────────────────────────────────────────────
+function signIn() {
+    // Open dev dashboard in browser — user signs in there
+    // Firebase Auth session is then picked up by the add-in
+    Office.context.ui.openBrowserWindow('https://taskrecorder-dev.web.app');
+    document.getElementById('authError').textContent =
+        'Please sign in via the browser window that just opened, then click "I\'ve signed in — Refresh" below.';
+}
+
+// ── Refresh Auth ──────────────────────────────────────────────────────
+function refreshAuth() {
+    if (auth.currentUser) {
+        auth.currentUser.reload().then(() => {
+            document.getElementById('authError').textContent = '';
+        });
+    } else {
+        auth.signInWithPopup(googleProvider)
+            .catch(() => {
+                document.getElementById('authError').textContent =
+                    'Please sign in via the browser window first, then click Refresh.';
+            });
+    }
+}
 
 // ── Tab Switching ─────────────────────────────────────────────────────
 function showTab(tabName) {
@@ -47,26 +85,23 @@ function extractEmail() {
         return;
     }
 
-    const senderName = item.from.displayName || '';
+    const senderName  = item.from.displayName || '';
     const senderEmail = (item.from.emailAddress || '').toLowerCase();
     const receiverName = item.to.map(r => r.displayName).join(', ') || '';
 
-    document.getElementById('txtSubject').value = item.subject || '';
-    document.getElementById('txtSender').value = senderName;
+    document.getElementById('txtSubject').value  = item.subject || '';
+    document.getElementById('txtSender').value   = senderName;
     document.getElementById('txtReceiver').value = receiverName;
 
     const received = new Date(item.dateTimeCreated);
     document.getElementById('txtDateTime').value = formatDateTime(received);
 
-    // ── Auto-select Task Type ─────────────────────────────────────────
+    // Auto-select Task Type
     if (senderEmail === 'noreplykc@makeenenergy.com') {
-        // QMS platform email
         document.querySelector('input[name="taskType"][value="QMS Task"]').checked = true;
     } else if (senderName && senderName === receiverName) {
-        // Sender and receiver are the same person — self-created task
         document.querySelector('input[name="taskType"][value="Created"]').checked = true;
     } else {
-        // Default — requested by someone else
         document.querySelector('input[name="taskType"][value="Requested"]').checked = true;
     }
 
@@ -107,11 +142,9 @@ async function generateTaskId() {
         .limit(1)
         .get();
 
-    if (snapshot.empty) {
-        return '0001';
-    }
+    if (snapshot.empty) return '0001';
 
-    const lastTask = snapshot.docs[0].data();
+    const lastTask   = snapshot.docs[0].data();
     const lastNumber = parseInt(lastTask.taskId, 10);
     return String(lastNumber + 1).padStart(4, '0');
 }
@@ -119,7 +152,7 @@ async function generateTaskId() {
 // ── Create Task ───────────────────────────────────────────────────────
 async function createTask() {
     const subject = document.getElementById('txtSubject').value.trim();
-    const sender = document.getElementById('txtSender').value.trim();
+    const sender  = document.getElementById('txtSender').value.trim();
     const receiver = document.getElementById('txtReceiver').value.trim();
 
     if (!subject || !sender) {
@@ -128,40 +161,36 @@ async function createTask() {
     }
 
     const createBtn = document.getElementById('btnCreate');
-    createBtn.disabled = true;
+    createBtn.disabled  = true;
     createBtn.textContent = 'Checking...';
 
     try {
-        // ── Duplicate Check ───────────────────────────────────────────
+        // Duplicate check
         const duplicateSnapshot = await db.collection('tasks')
             .where('subject', '==', subject)
             .where('senderName', '==', sender)
             .get();
 
         if (!duplicateSnapshot.empty) {
-            // Found matching task — show warning
             const existingTask = duplicateSnapshot.docs[0].data();
             showStatus('create',
-                '⚠️ Task ' + existingTask.taskId + ' already exists for this email (' + existingTask.status + '). Edit the Subject field above to create a new task anyway.',
+                '⚠️ Task ' + existingTask.taskId + ' already exists for this email (' + existingTask.status + '). Edit the Subject field to create a new task anyway.',
                 'error');
             createBtn.disabled = false;
             createBtn.textContent = 'Create';
-            // Highlight subject field to guide user
             document.getElementById('txtSubject').style.borderColor = '#c0392b';
             document.getElementById('txtSubject').focus();
             return;
         }
 
-        // Reset subject field border if previously highlighted
         document.getElementById('txtSubject').style.borderColor = '';
-
         createBtn.textContent = 'Creating...';
         showStatus('create', 'Creating task...', 'success');
 
-        const taskId = await generateTaskId();
+        const taskId        = await generateTaskId();
         const actionDateTime = document.getElementById('txtDateTime').value;
-        const comments = document.getElementById('txtComments').value;
-        const taskType = document.querySelector('input[name="taskType"]:checked').value;
+        const comments      = document.getElementById('txtComments').value;
+        const taskType      = document.querySelector('input[name="taskType"]:checked').value;
 
         const newTask = {
             taskId:          taskId,
@@ -177,7 +206,8 @@ async function createTask() {
             comments:        '[' + actionDateTime + '] Created - ' + comments,
             site:            document.getElementById('cmbSite').value,
             taskType:        taskType,
-            priorityScore:   parseInt(document.getElementById('txtPriority').value, 10)
+            priorityScore:   parseInt(document.getElementById('txtPriority').value, 10),
+            linkedProjectId: ''
         };
 
         await db.collection('tasks').doc(taskId).set(newTask);
@@ -188,7 +218,7 @@ async function createTask() {
     } catch (error) {
         console.error('Error creating task:', error);
         showStatus('create', 'Error: ' + error.message, 'error');
-        createBtn.disabled = false;
+        createBtn.disabled  = false;
         createBtn.textContent = 'Create';
     }
 }
@@ -196,11 +226,9 @@ async function createTask() {
 // ── Load Active Tasks ─────────────────────────────────────────────────
 async function loadActiveTasks(tab) {
     const selectId = tab === 'pause' ? 'cmbActiveTaskPause' : 'cmbActiveTaskClose';
-    const select = document.getElementById(selectId);
-
-    // Disable action button while loading
+    const select   = document.getElementById(selectId);
     const actionBtnId = tab === 'pause' ? 'btnPause' : 'btnClose';
-    const actionBtn = document.getElementById(actionBtnId);
+    const actionBtn   = document.getElementById(actionBtnId);
     actionBtn.disabled = true;
 
     select.innerHTML = '<option value="">-- Loading... --</option>';
@@ -219,9 +247,9 @@ async function loadActiveTasks(tab) {
         }
 
         snapshot.forEach(doc => {
-            const task = doc.data();
+            const task   = doc.data();
             const option = document.createElement('option');
-            option.value = task.taskId;
+            option.value       = task.taskId;
             option.textContent = task.taskId + ' - ' + task.subject.substring(0, 50);
             select.appendChild(option);
         });
@@ -236,7 +264,7 @@ async function loadActiveTasks(tab) {
 
 // ── Load Paused Tasks ─────────────────────────────────────────────────
 async function loadPausedTasks() {
-    const select = document.getElementById('cmbPausedTaskResume');
+    const select    = document.getElementById('cmbPausedTaskResume');
     const resumeBtn = document.getElementById('btnResume');
     resumeBtn.disabled = true;
 
@@ -256,9 +284,9 @@ async function loadPausedTasks() {
         }
 
         snapshot.forEach(doc => {
-            const task = doc.data();
+            const task   = doc.data();
             const option = document.createElement('option');
-            option.value = task.taskId;
+            option.value       = task.taskId;
             option.textContent = task.taskId + ' - ' + task.subject.substring(0, 50);
             select.appendChild(option);
         });
@@ -273,7 +301,7 @@ async function loadPausedTasks() {
 
 // ── Task Selected in Pause Dropdown ──────────────────────────────────
 async function taskSelectedPause() {
-    const taskId = document.getElementById('cmbActiveTaskPause').value;
+    const taskId   = document.getElementById('cmbActiveTaskPause').value;
     const pauseBtn = document.getElementById('btnPause');
 
     if (!taskId) {
@@ -281,7 +309,6 @@ async function taskSelectedPause() {
         pauseBtn.disabled = true;
         return;
     }
-
     try {
         const doc = await db.collection('tasks').doc(taskId).get();
         if (doc.exists) {
@@ -296,7 +323,7 @@ async function taskSelectedPause() {
 
 // ── Task Selected in Resume Dropdown ─────────────────────────────────
 async function taskSelectedResume() {
-    const taskId = document.getElementById('cmbPausedTaskResume').value;
+    const taskId    = document.getElementById('cmbPausedTaskResume').value;
     const resumeBtn = document.getElementById('btnResume');
 
     if (!taskId) {
@@ -304,7 +331,6 @@ async function taskSelectedResume() {
         resumeBtn.disabled = true;
         return;
     }
-
     try {
         const doc = await db.collection('tasks').doc(taskId).get();
         if (doc.exists) {
@@ -319,7 +345,7 @@ async function taskSelectedResume() {
 
 // ── Task Selected in Close Dropdown ──────────────────────────────────
 async function taskSelectedClose() {
-    const taskId = document.getElementById('cmbActiveTaskClose').value;
+    const taskId   = document.getElementById('cmbActiveTaskClose').value;
     const closeBtn = document.getElementById('btnClose');
 
     if (!taskId) {
@@ -327,7 +353,6 @@ async function taskSelectedClose() {
         closeBtn.disabled = true;
         return;
     }
-
     try {
         const doc = await db.collection('tasks').doc(taskId).get();
         if (doc.exists) {
@@ -357,9 +382,7 @@ function validateDateTime(dateTimeStr, referenceStr, tab, checkFuture = true) {
 
     if (referenceStr) {
         const referenceTime = new Date(referenceStr.replace(' ', 'T'));
-        if (actionTime <= referenceTime) {
-            return false;
-        }
+        if (actionTime <= referenceTime) return false;
     }
 
     return true;
@@ -367,9 +390,9 @@ function validateDateTime(dateTimeStr, referenceStr, tab, checkFuture = true) {
 
 // ── Pause Task ────────────────────────────────────────────────────────
 async function pauseTask() {
-    const taskId = document.getElementById('cmbActiveTaskPause').value;
+    const taskId   = document.getElementById('cmbActiveTaskPause').value;
     const pauseTime = document.getElementById('txtDateTimePause').value;
-    const comments = document.getElementById('txtCommentsPause').value;
+    const comments  = document.getElementById('txtCommentsPause').value;
 
     if (!taskId || !pauseTime) {
         showStatus('pause', 'Please select a task and set pause time.', 'error');
@@ -383,21 +406,20 @@ async function pauseTask() {
     }
 
     const pauseBtn = document.getElementById('btnPause');
-    pauseBtn.disabled = true;
+    pauseBtn.disabled  = true;
     pauseBtn.textContent = 'Pausing...';
 
     try {
         const docRef = db.collection('tasks').doc(taskId);
-        const doc = await docRef.get();
-        const task = doc.data();
+        const doc    = await docRef.get();
+        const task   = doc.data();
 
-        const activateTime = new Date(task.activateTime.replace(' ', 'T'));
+        const activateTime  = new Date(task.activateTime.replace(' ', 'T'));
         const pauseDateTime = new Date(pauseTime.replace(' ', 'T'));
-        const diffMinutes = Math.round((pauseDateTime - activateTime) / 60000);
-        const newWorkTime = (task.workTimeMin || 0) + diffMinutes;
+        const diffMinutes   = Math.round((pauseDateTime - activateTime) / 60000);
+        const newWorkTime   = (task.workTimeMin || 0) + diffMinutes;
 
-        const newComment = task.comments +
-            '\n[' + pauseTime + '] Paused - ' + comments;
+        const newComment = task.comments + '\n[' + pauseTime + '] Paused - ' + comments;
 
         await docRef.update({
             status:         'Paused',
@@ -415,16 +437,16 @@ async function pauseTask() {
         console.error('Error pausing task:', error);
         showStatus('pause', 'Error: ' + error.message, 'error');
     } finally {
-        pauseBtn.disabled = true;
+        pauseBtn.disabled  = true;
         pauseBtn.textContent = 'Pause';
     }
 }
 
 // ── Resume Task ───────────────────────────────────────────────────────
 async function resumeTask() {
-    const taskId = document.getElementById('cmbPausedTaskResume').value;
+    const taskId     = document.getElementById('cmbPausedTaskResume').value;
     const resumeTime = document.getElementById('txtDateTimeResume').value;
-    const comments = document.getElementById('txtCommentsResume').value;
+    const comments   = document.getElementById('txtCommentsResume').value;
 
     if (!taskId || !resumeTime) {
         showStatus('resume', 'Please select a task and set resume time.', 'error');
@@ -438,16 +460,15 @@ async function resumeTask() {
     }
 
     const resumeBtn = document.getElementById('btnResume');
-    resumeBtn.disabled = true;
+    resumeBtn.disabled  = true;
     resumeBtn.textContent = 'Resuming...';
 
     try {
         const docRef = db.collection('tasks').doc(taskId);
-        const doc = await docRef.get();
-        const task = doc.data();
+        const doc    = await docRef.get();
+        const task   = doc.data();
 
-        const newComment = task.comments +
-            '\n[' + resumeTime + '] Resumed - ' + comments;
+        const newComment = task.comments + '\n[' + resumeTime + '] Resumed - ' + comments;
 
         await docRef.update({
             status:         'Active',
@@ -465,43 +486,35 @@ async function resumeTask() {
         console.error('Error resuming task:', error);
         showStatus('resume', 'Error: ' + error.message, 'error');
     } finally {
-        resumeBtn.disabled = true;
+        resumeBtn.disabled  = true;
         resumeBtn.textContent = 'Resume';
     }
 }
 
 // ── Close Task ────────────────────────────────────────────────────────
 let closeConfirmPending = false;
-let closeConfirmTimer = null;
+let closeConfirmTimer   = null;
 
 async function closeTask() {
-    const taskId = document.getElementById('cmbActiveTaskClose').value;
+    const taskId    = document.getElementById('cmbActiveTaskClose').value;
     const closeTime = document.getElementById('txtDateTimeClose').value;
-    const comments = document.getElementById('txtCommentsClose').value;
+    const comments  = document.getElementById('txtCommentsClose').value;
 
     if (!taskId || !closeTime) {
         showStatus('close', 'Please select a task and set close time.', 'error');
         return;
     }
 
-    // First click — ask for confirmation
     if (!closeConfirmPending) {
         closeConfirmPending = true;
-
         const btn = document.getElementById('btnClose');
         btn.style.backgroundColor = '#c0392b';
         btn.textContent = 'Close Task';
-
         showStatus('close', '⚠️ Click Close again to confirm. Auto cancels in 10 seconds.', 'error');
-
-        closeConfirmTimer = setTimeout(() => {
-            resetCloseButton();
-        }, 10000);
-
+        closeConfirmTimer = setTimeout(() => { resetCloseButton(); }, 10000);
         return;
     }
 
-    // Second click — validate then proceed
     clearTimeout(closeConfirmTimer);
     resetCloseButton();
 
@@ -512,22 +525,21 @@ async function closeTask() {
     }
 
     const closeBtn = document.getElementById('btnClose');
-    closeBtn.disabled = true;
+    closeBtn.disabled  = true;
     closeBtn.textContent = 'Closing...';
 
     try {
         const docRef = db.collection('tasks').doc(taskId);
-        const doc = await docRef.get();
-        const task = doc.data();
+        const doc    = await docRef.get();
+        const task   = doc.data();
 
-        const activateTime = new Date(task.activateTime.replace(' ', 'T'));
+        const activateTime  = new Date(task.activateTime.replace(' ', 'T'));
         const closeDateTime = new Date(closeTime.replace(' ', 'T'));
-        const diffMinutes = Math.round((closeDateTime - activateTime) / 60000);
+        const diffMinutes   = Math.round((closeDateTime - activateTime) / 60000);
         const finalWorkTime = (task.workTimeMin || 0) + diffMinutes;
         const finalWorkHours = (finalWorkTime / 60).toFixed(1);
 
-        const newComment = task.comments +
-            '\n[' + closeTime + '] Closed - ' + comments;
+        const newComment = task.comments + '\n[' + closeTime + '] Closed - ' + comments;
 
         await docRef.update({
             status:         'Closed',
@@ -545,7 +557,7 @@ async function closeTask() {
         console.error('Error closing task:', error);
         showStatus('close', 'Error: ' + error.message, 'error');
     } finally {
-        closeBtn.disabled = true;
+        closeBtn.disabled  = true;
         closeBtn.textContent = 'Close';
     }
 }
@@ -561,43 +573,39 @@ function resetCloseButton() {
 // ── Set Current Time ──────────────────────────────────────────────────
 function setCurrentTime(tab) {
     const now = formatDateTime(new Date());
-    if (tab === 'pause') {
-        document.getElementById('txtDateTimePause').value = now;
-    } else if (tab === 'resume') {
-        document.getElementById('txtDateTimeResume').value = now;
-    } else if (tab === 'close') {
-        document.getElementById('txtDateTimeClose').value = now;
-    }
+    if (tab === 'pause')  document.getElementById('txtDateTimePause').value  = now;
+    else if (tab === 'resume') document.getElementById('txtDateTimeResume').value = now;
+    else if (tab === 'close')  document.getElementById('txtDateTimeClose').value  = now;
 }
 
 // ── Clear Forms ───────────────────────────────────────────────────────
 function clearCreate() {
-    document.getElementById('txtSubject').value = '';
+    document.getElementById('txtSubject').value  = '';
     document.getElementById('txtSubject').style.borderColor = '';
-    document.getElementById('txtSender').value = '';
+    document.getElementById('txtSender').value   = '';
     document.getElementById('txtReceiver').value = '';
     document.getElementById('txtDateTime').value = '';
     document.getElementById('txtProjectID').value = '';
-    document.getElementById('txtComments').value = '';
-    document.getElementById('cmbSite').value = 'MEDK';
-    document.getElementById('txtPriority').value = '5';
+    document.getElementById('txtComments').value  = '';
+    document.getElementById('cmbSite').value      = 'MEDK';
+    document.getElementById('txtPriority').value  = '5';
     document.querySelector('input[name="taskType"][value="Requested"]').checked = true;
     document.getElementById('btnCreate').disabled = true;
 }
 
 function clearPause() {
-    document.getElementById('txtDateTimePause').value = '';
-    document.getElementById('txtCommentsPause').value = '';
+    document.getElementById('txtDateTimePause').value  = '';
+    document.getElementById('txtCommentsPause').value  = '';
 }
 
 function clearResume() {
-    document.getElementById('txtDateTimeResume').value = '';
-    document.getElementById('txtCommentsResume').value = '';
+    document.getElementById('txtDateTimeResume').value  = '';
+    document.getElementById('txtCommentsResume').value  = '';
 }
 
 function clearClose() {
-    document.getElementById('txtDateTimeClose').value = '';
-    document.getElementById('txtCommentsClose').value = '';
+    document.getElementById('txtDateTimeClose').value  = '';
+    document.getElementById('txtCommentsClose').value  = '';
 }
 
 // ── Helper: Format Date ───────────────────────────────────────────────
@@ -609,12 +617,10 @@ function formatDateTime(date) {
 // ── Helper: Show Status Message ───────────────────────────────────────
 function showStatus(tab, message, type) {
     const statusId = 'status-' + tab;
-    let statusEl = document.getElementById(statusId);
+    const statusEl = document.getElementById(statusId);
     if (statusEl) {
         statusEl.textContent = message;
-        statusEl.className = 'status-msg ' + type;
-        setTimeout(() => {
-            statusEl.className = 'status-msg';
-        }, 4000);
+        statusEl.className   = 'status-msg ' + type;
+        setTimeout(() => { statusEl.className = 'status-msg'; }, 4000);
     }
 }
