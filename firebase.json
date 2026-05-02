@@ -1,10 +1,31 @@
 {
   "hosting": {
-    "public": "dashboard",
+    "public": ".",
     "ignore": [
       "firebase.json",
-      "**/.*",
-      "**/node_modules/**"
+      ".firebaserc",
+      ".gitignore",
+      ".firebase/**",
+      "**/node_modules/**",
+      "firebase-config.dev.js",
+      "dashboard/firebase-config.dev.js",
+      "migrate-*.html",
+      "manifest-dev.xml",
+      "taskpane-dev.html",
+      "app-dev.js",
+      "README.md"
+    ],
+    "rewrites": [],
+    "headers": [
+      {
+        "source": "**/*.@(js|html|css|xml)",
+        "headers": [
+          {
+            "key": "Cache-Control",
+            "value": "no-cache"
+          }
+        ]
+      }
     ]
   }
 }

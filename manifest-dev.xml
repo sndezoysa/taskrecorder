@@ -5,19 +5,19 @@
     xmlns:bt="http://schemas.microsoft.com/office/officeappbasictypes/1.0"
     xsi:type="MailApp">
 
-    <Id>2fe6a66f-f69c-4484-b274-9b0794504f51</Id>
+    <Id>6f405630-33f4-4772-8054-e5b459d03465</Id>
     <Version>2.0.0.0</Version>
     <ProviderName>TaskRecorder</ProviderName>
     <DefaultLocale>en-US</DefaultLocale>
-    <DisplayName DefaultValue="Task Recorder DEV"/>
-    <Description DefaultValue="DEV - Record and manage tasks from Outlook emails"/>
+    <DisplayName DefaultValue="Task Recorder"/>
+    <Description DefaultValue="Record and manage tasks from Outlook emails"/>
 
-    <IconUrl DefaultValue="https://sndezoysa.github.io/taskrecorder/assets/icon-80.png"/>
-    <HighResolutionIconUrl DefaultValue="https://sndezoysa.github.io/taskrecorder/assets/icon-80.png"/>
-    <SupportUrl DefaultValue="https://sndezoysa.github.io/taskrecorder/"/>
+    <IconUrl DefaultValue="https://taskrecorder-9e9c3.web.app/assets/icon-80.png"/>
+    <HighResolutionIconUrl DefaultValue="https://taskrecorder-9e9c3.web.app/assets/icon-80.png"/>
+    <SupportUrl DefaultValue="https://taskrecorder-9e9c3.web.app/"/>
 
     <AppDomains>
-        <AppDomain>https://sndezoysa.github.io</AppDomain>
+        <AppDomain>https://taskrecorder-9e9c3.web.app</AppDomain>
     </AppDomains>
 
     <Hosts>
@@ -33,7 +33,7 @@
     <FormSettings>
         <Form xsi:type="ItemRead">
             <DesktopSettings>
-                <SourceLocation DefaultValue="https://sndezoysa.github.io/taskrecorder/taskpane-dev.html"/>
+                <SourceLocation DefaultValue="https://taskrecorder-9e9c3.web.app/index.html"/>
                 <RequestedHeight>450</RequestedHeight>
             </DesktopSettings>
         </Form>
@@ -93,19 +93,19 @@
 
             <Resources>
                 <bt:Images>
-                    <bt:Image id="Icon.16x16" DefaultValue="https://sndezoysa.github.io/taskrecorder/assets/icon-16.png"/>
-                    <bt:Image id="Icon.32x32" DefaultValue="https://sndezoysa.github.io/taskrecorder/assets/icon-32.png"/>
-                    <bt:Image id="Icon.80x80" DefaultValue="https://sndezoysa.github.io/taskrecorder/assets/icon-80.png"/>
+                    <bt:Image id="Icon.16x16" DefaultValue="https://taskrecorder-9e9c3.web.app/assets/icon-16.png"/>
+                    <bt:Image id="Icon.32x32" DefaultValue="https://taskrecorder-9e9c3.web.app/assets/icon-32.png"/>
+                    <bt:Image id="Icon.80x80" DefaultValue="https://taskrecorder-9e9c3.web.app/assets/icon-80.png"/>
                 </bt:Images>
                 <bt:Urls>
-                    <bt:Url id="Taskpane.Url" DefaultValue="https://sndezoysa.github.io/taskrecorder/taskpane-dev.html"/>
+                    <bt:Url id="Taskpane.Url" DefaultValue="https://taskrecorder-9e9c3.web.app/index.html"/>
                 </bt:Urls>
                 <bt:ShortStrings>
-                    <bt:String id="GroupLabel" DefaultValue="Task Recorder DEV"/>
-                    <bt:String id="TaskpaneButton.Label" DefaultValue="Task Recorder DEV"/>
+                    <bt:String id="GroupLabel" DefaultValue="Task Recorder"/>
+                    <bt:String id="TaskpaneButton.Label" DefaultValue="Task Recorder"/>
                 </bt:ShortStrings>
                 <bt:LongStrings>
-                    <bt:String id="TaskpaneButton.Tooltip" DefaultValue="DEV - Open Task Recorder to create and manage tasks"/>
+                    <bt:String id="TaskpaneButton.Tooltip" DefaultValue="Open Task Recorder to create and manage tasks"/>
                 </bt:LongStrings>
             </Resources>
 

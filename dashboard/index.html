@@ -10,7 +10,6 @@
     <script src="https://www.gstatic.com/firebasejs/10.12.0/firebase-app-compat.js"></script>
     <script src="https://www.gstatic.com/firebasejs/10.12.0/firebase-firestore-compat.js"></script>
     <script src="https://www.gstatic.com/firebasejs/10.12.0/firebase-auth-compat.js"></script>
-    <script src="firebase-config.dev.js"></script>
     <style>
         * { margin: 0; padding: 0; box-sizing: border-box; }
 
@@ -323,7 +322,6 @@
     <div style="background:white; border-radius:12px; box-shadow:0 4px 20px rgba(0,0,0,0.15); padding:3rem 2.5rem; max-width:380px; width:90%; text-align:center;">
         <div style="width:60px; height:60px; background:linear-gradient(135deg,#1a4d1a,#2d6b2d); border-radius:50%; margin:0 auto 1.5rem; display:flex; align-items:center; justify-content:center; color:white; font-size:1.8rem;">✓</div>
         <h2 style="color:#1a4d1a; font-size:1.3rem; margin-bottom:0.5rem;">Task Recorder</h2>
-        <p style="color:#e65100; font-size:0.8rem; font-weight:600; margin-bottom:0.5rem;">🔧 DEVELOPMENT</p>
         <p style="color:#666; font-size:0.9rem; margin-bottom:2rem;">ATEX/IECEx Project Manager</p>
         <p style="color:#888; font-size:0.85rem; margin-bottom:1.5rem;">Sign in to access your dashboard</p>
         <button onclick="signIn()" style="background:#2d6b2d; color:white; border:none; padding:0.8rem 1.5rem; border-radius:6px; font-size:0.95rem; cursor:pointer; width:100%; font-family:inherit; display:flex; align-items:center; justify-content:center; gap:0.5rem;">
@@ -340,7 +338,6 @@
     <div class="header-content">
         <div style="display:flex; align-items:center; gap:0.8rem;">
             <h1>ATEX/IECEx Project Manager - Daily Tasks</h1>
-            <span style="background:#e65100; color:white; font-size:0.7rem; font-weight:700; padding:0.2rem 0.5rem; border-radius:3px; letter-spacing:0.05em;">DEV</span>
         </div>
         <div id="headerClock" class="last-updated"></div>
         <div style="display: flex; gap: 1rem; align-items: center; flex-wrap: wrap;">
@@ -563,8 +560,19 @@
 </div>
 
 <script>
-    // ── Firebase loaded from firebase-config.dev.js ───────────────────────
-    // db, auth and googleProvider are initialized there
+    // ── Firebase Configuration — PRODUCTION ───────────────────────────────
+    const firebaseConfig = {
+        apiKey: "AIzaSyB8VKEBRGybHfgRJJTT2MlBl4kJK8y1PX8",
+        authDomain: "taskrecorder-9e9c3.firebaseapp.com",
+        projectId: "taskrecorder-9e9c3",
+        storageBucket: "taskrecorder-9e9c3.firebasestorage.app",
+        messagingSenderId: "416679395956",
+        appId: "1:416679395956:web:00755cd5f74785b5aa4721"
+    };
+    firebase.initializeApp(firebaseConfig);
+    const db = firebase.firestore();
+    const auth = firebase.auth();
+    const googleProvider = new firebase.auth.GoogleAuthProvider();
 
     // ── State ─────────────────────────────────────────────────────────────
     let allTasks = [];
