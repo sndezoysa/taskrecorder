@@ -1062,8 +1062,8 @@
             const dateStr = `${now.getFullYear()}-${pad(now.getMonth()+1)}-${pad(now.getDate())}`;
             const filename = `TaskLog_Export_${dateStr}.xlsx`;
 
-            // Download
-            XLSX.writeFile(wb, filename);
+            // Download with Save As dialog if supported
+            await saveFileWithDialog(wb, filename);
 
             loadStatus.textContent = `✅ Exported ${rows.length} tasks to ${filename}`;
             setTimeout(() => { loadStatus.textContent = prev; }, 4000);
@@ -1476,7 +1476,7 @@
     }
 
     // ── Export Mini Projects ──────────────────────────────────────────────
-    function exportMiniProjects() {
+    async function exportMiniProjects() {
         const miniProjects = allTasks.filter(t => t.linkedProjectId && t.linkedProjectId !== '');
 
         if (miniProjects.length === 0) {
@@ -1506,12 +1506,42 @@
         const now = new Date();
         const pad = n => String(n).padStart(2, '0');
         const dateStr = `${now.getFullYear()}-${pad(now.getMonth()+1)}-${pad(now.getDate())}`;
-        XLSX.writeFile(wb, `MiniProjects_${dateStr}.xlsx`);
+        const filename = `MiniProjects_${dateStr}.xlsx`;
+
+        await saveFileWithDialog(wb, filename);
 
         const loadStatus = document.getElementById('loadStatus');
         const prev = loadStatus.textContent;
         loadStatus.textContent = `✅ Exported ${miniProjects.length} mini projects`;
         setTimeout(() => { loadStatus.textContent = prev; }, 3000);
+    }
+
+    // ── Save File With Dialog ─────────────────────────────────────────────
+    async function saveFileWithDialog(wb, filename) {
+        // Try File System Access API first (Chrome/Edge) — shows Save As dialog
+        if (window.showSaveFilePicker) {
+            try {
+                const fileHandle = await window.showSaveFilePicker({
+                    suggestedName: filename,
+                    types: [{
+                        description: 'Excel Files',
+                        accept: { 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet': ['.xlsx'] }
+                    }]
+                });
+                const writable = await fileHandle.createWritable();
+                const wbout = XLSX.write(wb, { bookType: 'xlsx', type: 'array' });
+                await writable.write(new Blob([wbout], { type: 'application/octet-stream' }));
+                await writable.close();
+                return;
+            } catch (err) {
+                // User cancelled dialog — don't fallback
+                if (err.name === 'AbortError') return;
+                // Other error — fall through to regular download
+                console.warn('Save dialog failed, falling back to download:', err);
+            }
+        }
+        // Fallback for Firefox/Safari — regular download to Downloads folder
+        XLSX.writeFile(wb, filename);
     }
 
     // ── Clock ─────────────────────────────────────────────────────────────
